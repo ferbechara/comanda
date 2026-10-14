@@ -1,4 +1,8 @@
 <!DOCTYPE html>
+<!--
+  Comanda el Fútbol
+  © 2026 Fernando Bechara. Todos los derechos reservados. Prohibida su copia o redistribución sin autorización.
+-->
 <html lang="es">
 <head>
 <meta charset="utf-8">
@@ -833,16 +837,18 @@ tr.me{
 .sc-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:10px;margin:8px 0 12px}
 .sc-form label{display:flex;flex-direction:column;gap:4px;font-size:13px}
 .sc-form .rng{display:flex;align-items:center;gap:6px}
+@media (max-width:700px){.task .copy{font-size:9px!important;line-height:1.2}}
 </style>
 </head>
 <body>
 <div class="w" id="app"></div>
 <div class="task">
-  <div style="display:flex;align-items:center;gap:8px;"><span style="color:var(--primary);font-weight:bold;">⚽ COMANDA EL FÚTBOL</span></div>
+  <div style="display:flex;align-items:center;gap:8px;"><span style="color:var(--primary);font-weight:bold;">⚽ COMANDA EL FÚTBOL</span><span class="copy" style="color:var(--fg-sub);font-size:11px;">© 2026 Fernando Bechara. Todos los derechos reservados. Prohibida su copia o redistribución sin autorización.</span></div>
   <div id="clk" style="color:var(--fg-sub);font-family:monospace;"></div>
 </div>
 
 <script>
+/* Comanda el Fútbol — © 2026 Fernando Bechara. Todos los derechos reservados. Prohibida su copia o redistribución sin autorización. */
 const R=(a,b)=>a+Math.floor(Math.random()*(b-a+1)),pick=a=>a[R(0,a.length-1)];
 
 // Equipos de Argentina (32)
@@ -2482,7 +2488,7 @@ function render(){
     };
 
     A.innerHTML=(SV&&SV.me!==null?win('Partida guardada',`<p>${(SV.pl||[SV.me]).map(i=>SV.teams[i].n+' ['+SV.teams[i].country+']').join(', ')} · Temporada ${SV.s} · ${SV.w>=SV.fx.length?'Temporada terminada':'Jornada '+(SV.w+1)+' de '+SV.fx.length}</p><button class="big" onclick="cont()">Continuar partida</button>`):'')
-    +win('⚽ Comanda el Fútbol — Nueva partida',`<p>288 clubes de seis países (Argentina, Brasil, Colombia, Inglaterra, Italia y España: 48 por país, en tres divisiones), cada liga con Copa Nacional y Supercopa, más Copa Internacional (Sudamérica), Copa Europea y Copa Intercontinental. Elegí el país de tu club. Selecciones: Mundial, Mundial Sub-20, Copa Continental y Eurocopa. Todas las copas se juegan en jornadas propias: si tu club no compite, tiene jornada libre.</p><p class="sm">📊 Este juego registra estadísticas anónimas de uso (tiempo de juego, secciones visitadas y errores) para poder mejorarlo. No se guarda ningún dato personal.</p><p>¿Cuántos managers van a jugar?</p><div class="btn-group">${[1,2,3,4].map(n=>`<button class="${S.n==n?'on':''}" onclick="SETUP.n=${n};render()">${n}</button>`).join('')}</div><p>Mercado de pases:</p><div class="btn-group"><button class="${S.tw?'on':''}" onclick="SETUP.tw=true;render()">Traspasos con ventanas</button><button class="${S.tw?'':'on'}" onclick="SETUP.tw=false;render()">Traspasos sin ventanas</button></div><p class="sm">${S.tw?'Los traspasos entre clubes solo se hacen durante las fechas 1 a 5 y 16 a 20 de la liga. Los agentes libres se fichan siempre.':'Se puede comprar, vender y recibir ofertas en cualquier momento de la temporada.'}</p>`)
+    +win('⚽ Comanda el Fútbol — Nueva partida',`<p>288 clubes de seis países (Argentina, Brasil, Colombia, Inglaterra, Italia y España: 48 por país, en tres divisiones), cada liga con Copa Nacional y Supercopa, más Copa Internacional (Sudamérica), Copa Europea y Copa Intercontinental. Elegí el país de tu club. Selecciones: Mundial, Mundial Sub-20, Copa Continental y Eurocopa. Todas las copas se juegan en jornadas propias: si tu club no compite, tiene jornada libre.</p><p class="sm">📊 Este juego registra estadísticas anónimas de uso (tiempo de juego, secciones visitadas y errores) para poder mejorarlo. No se guarda ningún dato personal.</p><p class="sm">© 2026 Fernando Bechara. Todos los derechos reservados. Prohibida su copia o redistribución sin autorización.</p><p>¿Cuántos managers van a jugar?</p><div class="btn-group">${[1,2,3,4].map(n=>`<button class="${S.n==n?'on':''}" onclick="SETUP.n=${n};render()">${n}</button>`).join('')}</div><p>Mercado de pases:</p><div class="btn-group"><button class="${S.tw?'on':''}" onclick="SETUP.tw=true;render()">Traspasos con ventanas</button><button class="${S.tw?'':'on'}" onclick="SETUP.tw=false;render()">Traspasos sin ventanas</button></div><p class="sm">${S.tw?'Los traspasos entre clubes solo se hacen durante las fechas 1 a 5 y 16 a 20 de la liga. Los agentes libres se fichan siempre.':'Se puede comprar, vender y recibir ofertas en cualquier momento de la temporada.'}</p>`)
     +win('Configuración de Managers',`<div class="manager-setup-intro">Elegí el país, la división y después el club con el que vas a competir. Cada manager puede dirigir un equipo distinto.</div>`+[...Array(S.n).keys()].map(k=>`<section class="manager-setup-card"><label class="manager-name-label" for="manager-name-${k}">Nombre del manager ${k+1}</label><input id="manager-name-${k}" class="manager-name-input" value="${S.nm[k].replace(/"/g,'&quot;')}" placeholder="Manager ${k+1}" maxlength="16" oninput="SETUP.nm[${k}]=this.value">${cl(k)}</section>`).join('')+(S.err?`<p class="m">${S.err}</p>`:'')+'<button class="big setup-start-button" onclick="startGame()">Empezar Juego ▶</button>');return
   }
 
