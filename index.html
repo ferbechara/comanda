@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Comanda el Fútbol 6.6 - Edición América y Europa</title>
+<title>Comanda el Fútbol 6.7 - Edición América y Europa</title>
 <style>
 :root {
   --bg-dark: #0a0e17;
@@ -3455,38 +3455,101 @@ function clk(){const d=new Date();document.getElementById('clk').textContent=Str
 clk();setInterval(clk,30000);
 
 
-// ===== Estadísticas anónimas de uso (Google Sheets + Apps Script) =====
-// Envía: inicio de sesión, minutos activos (solo con la pestaña visible) y eventos de la partida.
-// No se envía ningún dato personal: el jugador se identifica con un código al azar guardado en este navegador.
-const ST_URL='https://script.google.com/macros/s/AKfycbzTLj4YJz2CdNwqheL02p08txZKAWH5DyAnGBBASqsl8V6j_W2Gv2_JDc6st-qu6e3W0A/exec',ST_KEY='cef-2026',ST_VER='6.6';
+// ===== Estadísticas anónimas de uso (Google Sheets + Apps Script) — v6.7 =====
+// Envía: inicio de sesión, minutos activos (solo con la pestaña visible), hitos de la partida,
+// un resumen de cada temporada y contadores de uso de la sesión (secciones, por dónde se navega, ventanas, videos).
+// No se envía ningún dato personal: el navegador (pid), la sesión (sid) y la partida (gid) se identifican con códigos al azar.
+// Los mensajes se guardan en una cola local y salen en lotes. Si no llegan, se reintentan (también la próxima vez que se abra el juego).
+// La planilla descarta los repetidos con sid + q (número de mensaje dentro de la sesión).
+const ST_URL='https://script.google.com/macros/s/AKfycbzTLj4YJz2CdNwqheL02p08txZKAWH5DyAnGBBASqsl8V6j_W2Gv2_JDc6st-qu6e3W0A/exec',ST_KEY='cef-2026',ST_VER='6.7',ST_QK='cef_q',ST_QMAX=300,ST_LOTE=40;
 const stId=()=>'x'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const ST_PID=(()=>{try{let v=localStorage.getItem('cef_pid');if(!v){v=stId();localStorage.setItem('cef_pid',v)}return v}catch(e){return stId()}})(),ST_SID=stId();
-function stSend(o){try{const b=JSON.stringify(Object.assign({k:ST_KEY,pid:ST_PID,sid:ST_SID},o));
-  fetch(ST_URL,{method:'POST',mode:'no-cors',keepalive:b.length<60000,headers:{'Content-Type':'text/plain;charset=utf-8'},body:b}).catch(()=>{})}catch(e){}}
+let stSeq=0,stBusy=0,stFail=0,stNoAck=0,stT=0,stMem=[];
+// Contadores de uso de esta sesión (se mandan juntos en un mensaje «uso»)
+const STU={sec:{},src:{},est:0,tie:0,mej:0,fec:0,vfin:0,vcer:0,d:0};
+// Cola: en localStorage; si el navegador no lo permite, en memoria
+function stQ(){try{const q=JSON.parse(localStorage.getItem(ST_QK)||'[]');return Array.isArray(q)?q:[]}catch(e){return stMem}}
+function stQset(q){q=q.slice(-ST_QMAX);try{localStorage.setItem(ST_QK,JSON.stringify(q))}catch(e){stMem=q}}
+function stSend(o,lento){try{const m=JSON.parse(JSON.stringify(Object.assign({pid:ST_PID,sid:ST_SID,q:++stSeq,ts:Date.now()},o)));
+  try{if(!m.gid&&G&&G.pl&&G.gid)m.gid=G.gid}catch(e){}
+  const q=stQ();q.push(m);stQset(q);if(!lento){clearTimeout(stT);stT=setTimeout(stFlush,4000)}}catch(e){}}
+function stDrop(lote){const ids=new Set(lote.map(x=>x.sid+':'+x.q));stQset(stQ().filter(x=>!ids.has(x.sid+':'+x.q)))}
+function stPost(body,nc){return fetch(ST_URL,nc?{method:'POST',mode:'no-cors',keepalive:body.length<60000,headers:{'Content-Type':'text/plain;charset=utf-8'},body}:{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body})}
+// fin=true: la pestaña se oculta o se cierra → sendBeacon, sin esperar respuesta (lo enviado queda en la cola y se confirma después)
+function stFlush(fin){try{const q=stQ();if(!q.length)return;const lote=q.slice(0,ST_LOTE),body=JSON.stringify({k:ST_KEY,v:ST_VER,lote});
+  if(fin===true){try{if(navigator.sendBeacon&&navigator.sendBeacon(ST_URL,new Blob([body],{type:'text/plain;charset=utf-8'})))return}catch(e){}stPost(body,1).catch(()=>{});return}
+  if(stBusy)return;
+  if(stNoAck){stPost(body,1).catch(()=>{});stDrop(lote);if(q.length>lote.length)setTimeout(stFlush,1500);return}
+  stBusy=1;
+  stPost(body).then(r=>r.text()).then(t=>{stBusy=0;stFail=0;t=String(t||'');
+    if(/^ok/.test(t)||/inválid/.test(t)){stDrop(lote);if(q.length>lote.length)setTimeout(stFlush,1500)}}) // «ocupado» o «error»: queda en la cola
+  .catch(()=>{stBusy=0;if(navigator.onLine===false)return;
+    // Dos fallos seguidos con conexión: probablemente el navegador no deja leer la respuesta. Se pasa a enviar sin confirmación.
+    if(++stFail>=2){stNoAck=1;stFlush()}})}catch(e){stBusy=0}}
+setInterval(()=>{if(navigator.onLine!==false)stFlush()},45000);
+setTimeout(stFlush,6000); // lo que quedó pendiente de sesiones anteriores
+function stUso(){if(!STU.d)return;STU.d=0;stSend({t:'uso',u:{sec:STU.sec,src:STU.src,est:STU.est,tie:STU.tie,mej:STU.mej,fec:STU.fec,vfin:STU.vfin,vcer:STU.vcer}},1)}
+function stBye(){stUso();stFlush(true)}
+addEventListener('pagehide',stBye);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')stBye();else stFlush()});
 function stCtx(){try{const t=G&&G.teams&&G.me!=null?G.teams[G.me]:null;
   return{c:t?t.country:'',club:t?t.n:'',div:t?t.div:'',n:G&&G.pl?G.pl.length:'',tw:G&&G.pl?(G.tw===false?'no':'sí'):'',s:G&&G.pl?G.s:'',w:G&&G.pl&&G.fx?Math.min(G.w+1,G.fx.length):'',mode:G&&G.pl&&G.pres&&isPres()?'Presidente':G&&G.pl?'Manager':''}}catch(e){return{}}}
-function stEv(ev,det){stSend(Object.assign({t:'ev',ev,det:det||''},stCtx()))}
-// Inicio de sesión
-stSend({t:'ses',dev:/iPad|Tablet/i.test(navigator.userAgent)||(/Android/i.test(navigator.userAgent)&&!/Mobile/i.test(navigator.userAgent))?'Tablet':/Mobi|Android|iPhone/i.test(navigator.userAgent)?'Celular':'Computadora',scr:screen.width+'x'+screen.height,lang:navigator.language||'',ver:ST_VER});
-// Minutos activos: cuenta cada 15 s con la pestaña visible y avisa cada minuto nuevo
+function stEv(ev,det){try{
+  // Abrir el estadio o la tienda solo suma al contador; las mejoras se cuentan y además se registran como evento
+  if((ev==='estadio'||ev==='tienda')&&det==='abre'){STU[ev==='estadio'?'est':'tie']++;STU.d=1;return}
+  if((ev==='estadio'&&/^amplia/.test(det))||(ev==='tienda'&&/^mejora/.test(det))){STU.mej++;STU.d=1}}catch(e){}
+  stSend(Object.assign({t:'ev',ev,det:det||''},stCtx()))}
+// Inicio de sesión (vid: videos de la asistente apagados; tz: desfase horario del dispositivo en minutos, ej. 180 = UTC−3)
+stSend({t:'ses',dev:/iPad|Tablet/i.test(navigator.userAgent)||(/Android/i.test(navigator.userAgent)&&!/Mobile/i.test(navigator.userAgent))?'Tablet':/Mobi|Android|iPhone/i.test(navigator.userAgent)?'Celular':'Computadora',scr:screen.width+'x'+screen.height,lang:navigator.language||'',ver:ST_VER,
+  vid:(()=>{try{return localStorage.getItem('cef_cine_off')==='1'?1:0}catch(e){return 0}})(),tz:new Date().getTimezoneOffset()});
+// Minutos activos: cuenta cada 15 s con la pestaña visible y avisa cada minuto nuevo, con la temporada y la fecha en curso
 let stAct=0,stMin=0;
-setInterval(()=>{if(document.visibilityState!=='visible')return;stAct+=15;const m=Math.floor(stAct/60);if(m>stMin){stMin=m;stSend({t:'hb',m})}},15000);
+setInterval(()=>{if(document.visibilityState!=='visible')return;stAct+=15;const m=Math.floor(stAct/60);if(m>stMin){stMin=m;const x=stCtx();stSend({t:'hb',m,s:x.s,w:x.w,mode:x.mode},1);if(m%5===0)stUso()}},15000);
 // Errores de JavaScript (hasta 10 distintos por sesión)
 const stErrs=new Set();
 function stErr(m){m=String(m||'').slice(0,250);if(!m||stErrs.has(m)||stErrs.size>=10)return;stErrs.add(m);stEv('error',m)}
 window.addEventListener('error',e=>stErr((e.message||'Error')+(e.lineno?' (línea '+e.lineno+')':'')));
 window.addEventListener('unhandledrejection',e=>stErr('Promesa: '+(e.reason&&e.reason.message||e.reason)));
 // Eventos de la partida (se envuelven funciones existentes sin cambiar su comportamiento)
-(()=>{const o=startGame;startGame=function(){o.apply(this,arguments);if(!SETUP.err&&G&&G.pl&&G.pl.length)stEv('nueva_partida')}})();
-(()=>{const o=cont;cont=function(){o.apply(this,arguments);stEv('continuar_partida')}})();
-(()=>{const o=newSeason;newSeason=function(){const s0=G.s;o.apply(this,arguments);if(G.s>s0)stEv('fin_temporada','Empieza la temporada '+G.s)}})();
+// gid: código al azar de la partida. Se guarda dentro de G, así que viaja en el archivo de guardado.
+(()=>{const o=startGame;startGame=function(){o.apply(this,arguments);if(!SETUP.err&&G&&G.pl&&G.pl.length){try{G.gid=stId();save()}catch(e){}stEv('nueva_partida')}}})();
+(()=>{const o=cont;cont=function(){const r=o.apply(this,arguments);try{if(G&&G.pl&&!G.gid){G.gid=stId();save()}}catch(e){}stEv('continuar_partida');return r}})();
+(()=>{const o=newSeason;newSeason=function(){let pre=null;try{pre=stTempPre()}catch(e){}const s0=G.s;o.apply(this,arguments);
+  if(G.s>s0){try{stTempPost(pre)}catch(e){}stEv('fin_temporada','Empieza la temporada '+G.s)}}})();
 (()=>{const o=presStart;presStart=function(){const was=!!G.pres;o.apply(this,arguments);if(!was&&G.pres)stEv('presidente','Asume como Presidente de '+(G.pres.country||''))}})();
-// Secciones visitadas (cada sección se registra una vez por sesión)
-const stSec=new Set();
-(()=>{const o=render;render=function(){o.apply(this,arguments);try{if(!G||!G.pl||G.me==null)return;
+// ---- Resumen de temporada: se toma la foto antes de newSeason (tablas, copas, objetivos, decisión) y se completa después (ascenso, prestigio) ----
+function stTempPre(){const cix=x=>typeof x==='string'&&x[0]==='L'?+x.slice(1):(typeof x==='number'?x:-1);
+  const P=G.pres,pk=P&&P.k!=null?P.k:-1,out=[];
+  G.pl.forEach((ci,k)=>{const t=G.teams[ci];if(!t)return;const tb=table(t.country,t.div),ps=tb.findIndex(x=>x.i==ci)+1,nc=G.nc&&G.nc[t.country];
+    let obj='',ok='';try{const O=objOf(k);if(O&&O.ch){obj=O.ch.map(i=>O.off[i].k).join('+');const v=objOk(k);ok=v===null?'':v?'sí':'no'}}catch(e){}
+    out.push({k,ci,s:G.s,pres:pk===k,pc:P&&P.country||'',c:t.country,club:t.n,div:t.div,pos:ps,de:tb.length,
+      campLiga:ps===1?1:0,campCopa:nc&&nc.champ===ci?1:0,
+      campCont:[G.cup,G.ecup].some(c=>c&&c.champ!=null&&cix(c.champ)===ci)?1:0,campInter:G.ic&&G.ic.champ!=null&&cix(G.ic.champ)===ci?1:0,
+      obj,objOk:ok,cd:G.cd&&G.cd[k]?Object.assign({},G.cd[k]):null,over:P&&P.over?P.over.kind||'fin':''})});
+  let pres=null;if(pk>=0&&P){const r=P.rep||null;pres={k:pk,txt:(r?'aprobación '+r.avg+' · apoyo '+r.ok+'/'+r.n+' · ':'')+'caja '+f1(P.fund||0)+' M · títulos '+(P.tit||0)}}
+  return{odiv:G.teams.map(t=>t.div),out,pres}}
+function stTempPost(pre){if(!pre)return;
+  if(pre.pres){stEv('pres_temp',pre.pres.txt);const P=G.pres;if(!P||P.k!==pre.pres.k)stEv('pres_fin',(pre.out.find(x=>x.k===pre.pres.k)||{}).over||'fin del mandato')}
+  pre.out.forEach(x=>{const t=G.teams[x.ci],od=pre.odiv[x.ci],nd=t?t.div:od,d=x.cd;
+    let prest='';try{if(MP_ON)prest=mpOf(x.k).v}catch(e){}
+    let dec='';
+    if(d){if(d.to!=null){const n=G.teams[d.to];dec='cambia a '+(n?n.n+' ('+n.country+' D'+pre.odiv[d.to]+')':'otro club')}
+      else if(d.pres==='new')dec='gana la presidencia';else if(d.pres==='re')dec='reelegido presidente';else if(d.pc)dec='sigue como presidente';
+      else if(d.r&&d.lp)dec='pierde la elección y renueva';else if(d.r)dec='renueva'}
+    if(!dec&&x.pres&&x.over)dec=x.over==='lost'?'pierde la reelección':x.over==='retire'?'deja la presidencia':'termina la presidencia';
+    stSend({t:'temp',s:x.s,mode:x.pres?'Presidente':'Manager',c:x.pres?x.pc:x.c,club:x.pres?'':x.club,div:x.pres?'':x.div,
+      pos:x.pres?'':x.pos,de:x.pres?'':x.de,mov:x.pres?'':nd<od?'asc':nd>od?'desc':'',
+      campLiga:x.pres?0:x.campLiga,campCopa:x.pres?0:x.campCopa,campCont:x.pres?0:x.campCont,campInter:x.pres?0:x.campInter,
+      prest,presu:t&&t.bud!=null?t.bud:'',obj:x.obj,objOk:x.objOk,dec})})}
+// Secciones: la primera visita de cada sección se registra como evento (como hasta la 6.6);
+// además se cuentan todos los cambios de sección, por dónde llegó (stSrc) y las fechas jugadas.
+const stSec=new Set();let stSrc='',stLastSec='',stLastSW=-1;
+(()=>{const o=render;render=function(){const r=o.apply(this,arguments);try{if(G&&G.pl&&G.me!=null){
   const a=document.querySelector('.nav-main button.on'),b=document.querySelector('.nav-sub button.on'),
-    k=(a?a.textContent.trim():'')+(b?' › '+b.textContent.trim():'');
-  if(k&&!stSec.has(k)){stSec.add(k);stEv('seccion',k)}}catch(e){}}})();
+    k0=(a?a.textContent.trim():'')+(b?' › '+b.textContent.trim():''),k=k0+(typeof HV!=='undefined'&&HV?' · '+HV:'');
+  if(k0&&!stSec.has(k0)){stSec.add(k0);stEv('seccion',k0)}
+  if(k&&k!==stLastSec){if(stLastSec){STU.sec[k]=(STU.sec[k]||0)+1;const s=stSrc||'otro';STU.src[s]=(STU.src[s]||0)+1;STU.d=1}stLastSec=k}
+  const sw=G.s*1000+(G.w|0);if(stLastSW>=0&&sw>stLastSW){STU.fec+=G.s===Math.floor(stLastSW/1000)?sw-stLastSW:1;STU.d=1}stLastSW=sw}}catch(e){}stSrc='';return r}})();
 
 // Noticias destacadas: revisar antes de dibujar y mostrar la ventana después
 (()=>{const o=render;render=function(){try{alWatch()}catch(e){}o.apply(this,arguments);try{alShow()}catch(e){}try{if(document.getElementById('nmbal'))nmBal()}catch(e){}}})();
@@ -3526,7 +3589,7 @@ function cineShow(sit){const u=cineURL(sit.k);if(!u)return;const el=document.cre
   v.addEventListener('timeupdate',()=>{if(v.duration)bar.style.width=(100*v.currentTime/v.duration)+'%';if(!v.paused)pb.hidden=true});
   v.addEventListener('playing',()=>{pb.hidden=true});v.addEventListener('ended',()=>setTimeout(cineClose,500));v.addEventListener('error',()=>cineClose());
   const pr=v.play();if(pr&&pr.catch)pr.catch(()=>{pb.hidden=false});
-  el.querySelector('.cc-go').focus({preventScroll:true});try{stEv('video',sit.k)}catch(e){}}
+  el.querySelector('.cc-go').focus({preventScroll:true});}
 function cineClose(){const el=document.querySelector('.cefcine');if(!el)return;const v=el.querySelector('video');if(v){try{v.pause()}catch(e){}}el.classList.add('out');setTimeout(()=>el.remove(),350)}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&document.querySelector('.cefcine'))cineClose()});
 function cineBtn(){return cineAvail()?'<button onclick="cineSetOff(!cineOff());render()">'+(cineOff()?_t('🎬 Videos: desactivados'):_t('🎬 Videos: activados'))+'</button>':''}
@@ -4970,6 +5033,26 @@ Object.assign(I18N['es-ES'],{"<b>{d} de {n}</b> tareas hechas. Se tildan solas c
 (()=>{const o=trUI;trUI=function(){const h=o.apply(this,arguments);if(!h||!trOn())return h;const f=G.w+1;let c='';
   if(trOpen()){const w=TW.find(([a,b])=>f>=a&&f<=b);c=w&&f===w[1]?'tw-y':'tw-g'}else if(trNext()&&trNext()===f+1)c='tw-y';
   if(!c)return h;let r=h.replace('<p class="sm news">','<p class="sm news '+c+'">');if(c==='tw-y')r=r.replace('🟢','🟡');return r}})();
+
+// ===== Estadísticas (v6.7): ganchos en módulos que se definen más arriba (Sub-20, videos, plano, mensajes, archivo) =====
+// Por dónde se navega: barra (nav-main / nav-sub), inicio (botones «Ir a» y «Volver»), plano (plano 3D), msj (mensajes), not (noticias)
+document.addEventListener('click',e=>{try{const t=e.target&&e.target.closest?e.target:null;if(!t)return;
+  stSrc=t.closest('.nav-main,.nav-sub')?'barra':t.closest('.hm-secs,.hm-back')?'inicio':t.closest('.mb-act')?'msj':t.closest('#alov')?'not':''}catch(e){}},true);
+(()=>{const o=mqGo;mqGo=function(){stSrc='plano';return o.apply(this,arguments)}})();
+(()=>{const o=mbOpen;mbOpen=function(){stSrc='msj';return o.apply(this,arguments)}})();
+// Videos de la asistente: si se vieron completos o se cerraron antes, y cuándo se apagan o se vuelven a encender
+(()=>{const o=cineClose;cineClose=function(){try{const el=document.querySelector('.cefcine');if(el&&!el._st){el._st=1;const v=el.querySelector('video');
+  if(v&&!v.error){if(v.duration&&v.currentTime/v.duration>=.95)STU.vfin++;else STU.vcer++;STU.d=1}}}catch(e){}return o.apply(this,arguments)}})();
+(()=>{const o=cineSetOff;cineSetOff=function(v){const r=o.apply(this,arguments);try{stEv('videos',v?'apaga':'enciende')}catch(e){}return r}})();
+// Sub-20: resultado de cada partido dirigido y si sigue o deja el cargo
+(()=>{const o=natAfter;natAfter=function(){const L=G&&G.live,N=L&&L.nat;const r=o.apply(this,arguments);
+  try{if(N){const c=u20Cur(),x=c&&c.prog&&c.prog.res&&c.prog.res[N.rd]&&c.prog.res[N.rd][N.i];if(x){const mi=x.a===N.x,g1=mi?x.ga:x.gb,g2=mi?x.gb:x.ga;
+    stEv('sub20','resultado '+N.rd+' '+g1+'-'+g2+' '+(x.w===N.x?'gana':x.w==null?'empata':'pierde')+(x.pen?' por penales':''))}}}catch(e){}return r}})();
+(()=>{const o=u20Keep;u20Keep=function(yes){let m=null;try{m=u20Mine()}catch(e){}const ask=!!(m&&m[1]&&m[1].ask);const r=o.apply(this,arguments);
+  if(ask)try{stEv('sub20',(yes?'sigue ':'deja ')+m[0])}catch(e){}return r}})();
+// Archivo de guardado: cuántos descargan su partida o la cargan desde un archivo
+(()=>{const o=saveFile;saveFile=function(){const r=o.apply(this,arguments);try{stEv('archivo','descarga')}catch(e){}return r}})();
+(()=>{const o=loadFile;loadFile=function(inp){const f=!!(inp&&inp.files&&inp.files[0]);const r=o.apply(this,arguments);if(f)try{stEv('archivo','carga')}catch(e){}return r}})();
 
 // ===== Arranque del juego (v5.51): va al final para que todos los módulos ya estén cargados, también al reanudar tras cambiar el idioma =====
 init();
