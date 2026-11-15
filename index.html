@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Comanda el Fútbol 6.9 - Edición América y Europa</title>
+<title>Comanda el Fútbol 6.11 - Edición América y Europa</title>
 <style>
 :root {
   --bg-dark: #0a0e17;
@@ -3461,7 +3461,7 @@ clk();setInterval(clk,30000);
 // No se envía ningún dato personal: el navegador (pid), la sesión (sid) y la partida (gid) se identifican con códigos al azar.
 // Los mensajes se guardan en una cola local y salen en lotes. Si no llegan, se reintentan (también la próxima vez que se abra el juego).
 // La planilla descarta los repetidos con sid + q (número de mensaje dentro de la sesión).
-const ST_URL='https://script.google.com/macros/s/AKfycbzTLj4YJz2CdNwqheL02p08txZKAWH5DyAnGBBASqsl8V6j_W2Gv2_JDc6st-qu6e3W0A/exec',ST_KEY='cef-2026',ST_VER='6.9',ST_QK='cef_q',ST_QMAX=300,ST_LOTE=40;
+const ST_URL='https://script.google.com/macros/s/AKfycbzTLj4YJz2CdNwqheL02p08txZKAWH5DyAnGBBASqsl8V6j_W2Gv2_JDc6st-qu6e3W0A/exec',ST_KEY='cef-2026',ST_VER='6.11',ST_QK='cef_q',ST_QMAX=300,ST_LOTE=40;
 const stId=()=>'x'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const ST_PID=(()=>{try{let v=localStorage.getItem('cef_pid');if(!v){v=stId();localStorage.setItem('cef_pid',v)}return v}catch(e){return stId()}})(),ST_SID=stId();
 let stSeq=0,stBusy=0,stFail=0,stNoAck=0,stT=0,stMem=[];
@@ -5352,6 +5352,338 @@ try{new MutationObserver(ms=>{if(!infLv())return;for(const m of ms)m.addedNodes.
 
 Object.assign(I18N['en'],{"Mensajes y ayudas": "Messages and help", "Solo mensajes": "Messages only", "Información mínima": "Minimal information", "Todo como hasta ahora: explicaciones, consejos, cuentas hechas y recordatorios.": "Everything as before: explanations, tips, worked-out figures and reminders.", "Sin los consejos del juego. Siguen las explicaciones, las cuentas hechas y las tareas pendientes.": "Without the game's tips. Explanations, worked-out figures and pending tasks stay.", "Sin consejos, cuentas hechas ni recordatorios. Las explicaciones quedan detrás de «¿Cómo funciona?».": "No tips, worked-out figures or reminders. Explanations sit behind “How does it work?”.", "Tu personal (director de marketing, ojeador, asistente) te sigue hablando igual. No cambia la dificultad: el juego, los rivales y la economía son los mismos.": "Your staff (marketing director, scout, assistant) still talk to you the same way. Difficulty doesn't change: the game, the rivals and the economy are the same.", "Información en pantalla:": "On-screen information:", "Información en pantalla": "On-screen information", "Información en pantalla: {n}.": "On-screen information: {n}.", "Lo elige cada manager. Esto es para {n}.": "Each manager chooses. This is for {n}.", "¿Cómo funciona?": "How does it work?"});
 Object.assign(I18N['pt-BR'],{"Mensajes y ayudas": "Mensagens e ajudas", "Solo mensajes": "Só mensagens", "Información mínima": "Informação mínima", "Todo como hasta ahora: explicaciones, consejos, cuentas hechas y recordatorios.": "Tudo como até agora: explicações, dicas, contas feitas e lembretes.", "Sin los consejos del juego. Siguen las explicaciones, las cuentas hechas y las tareas pendientes.": "Sem as dicas do jogo. Continuam as explicações, as contas feitas e as tarefas pendentes.", "Sin consejos, cuentas hechas ni recordatorios. Las explicaciones quedan detrás de «¿Cómo funciona?».": "Sem dicas, contas feitas nem lembretes. As explicações ficam atrás de «Como funciona?».", "Tu personal (director de marketing, ojeador, asistente) te sigue hablando igual. No cambia la dificultad: el juego, los rivales y la economía son los mismos.": "Sua equipe (diretor de marketing, olheiro, auxiliar) continua falando com você igual. A dificuldade não muda: o jogo, os rivais e a economia são os mesmos.", "Información en pantalla:": "Informação na tela:", "Información en pantalla": "Informação na tela", "Información en pantalla: {n}.": "Informação na tela: {n}.", "Lo elige cada manager. Esto es para {n}.": "Cada técnico escolhe. Isto é para {n}.", "¿Cómo funciona?": "Como funciona?"});
+
+// ===== Ofertas con confirmación (v6.9.1) =====
+// Un jugador comentó que pidió una cesión dejando el precio que venía escrito (el de compra) y pagó casi todo su presupuesto,
+// sin poder deshacerlo. Ahora: (1) al elegir «Cesión», el precio sugerido cambia al de una cesión (y vuelve al de compra si
+// se elige «Compra»); (2) antes de enviar cualquier oferta aparece una confirmación con el costo y el presupuesto que queda.
+const CF_LOAN=.25;
+function cfSug(p,type){return Math.max(.1,Math.round((type==='loan'?vct(p)*CF_LOAN:val(p)*1.1)*10)/10)}
+// Cambio de tipo en las tablas de clubes (ofrtypeN / ofrN) y en los informes del ojeador (softypeK / sofrK)
+document.addEventListener('change',e=>{const s=e.target;if(!s||s.tagName!=='SELECT')return;const m=s.id&&s.id.match(/^(s?)ofr?type(\d+)$/)||s.id&&s.id.match(/^(s)oftype(\d+)$/);if(!m)return;
+  try{let p=null;const k=+m[2];
+    if(s.id.startsWith('softype')){const e2=G.teams[G.me].sr&&G.teams[G.me].sr.l[k];if(e2&&e2.k==='L'){const T=G.teams[e2.ci];p=T&&T.sq.find(x=>x.n==e2.n)}}
+    else{const ci=CFCI();p=ci!=null&&G.teams[ci]?G.teams[ci].sq[k]:null}
+    const inp=document.getElementById((s.id.startsWith('softype')?'sofr':'ofr')+k);if(p&&inp)inp.value=cfSug(p,s.value).toFixed(1)}catch(_){}},true);
+// El club que se está mirando: el que tiene botones «offer(ci,…)» en pantalla
+function CFCI(){const b=document.querySelector('button[onclick^="offer("]');if(!b)return null;const m=b.getAttribute('onclick').match(/^offer\((\d+)/);return m?+m[1]:null}
+// Confirmación antes de ofertar
+let CFP=null;
+(()=>{const o=offer;offer=function(ci,pi,prOv,tyOv){if(CFP&&CFP.go)return o.apply(this,arguments);
+  const t=G.teams[ci],p=t&&t.sq[pi];if(!p)return o.apply(this,arguments);
+  const el=document.getElementById('ofr'+pi),te=document.getElementById('ofrtype'+pi);
+  const price=prOv!=null?Math.round(prOv*10)/10:Math.round(parseFloat(el&&el.value)*10)/10,type=tyOv||(te?te.value:'buy');
+  if(!(price>0)||price>G.bud||!trOpen())return o.call(this,ci,pi,price,type);
+  CFP={ci,pi,price,type,n:p.n};cfShow(t,p,price,type)}})();
+function cfShow(t,p,price,type){let el=document.getElementById('cf-sheet');if(!el){el=document.createElement('div');el.id='cf-sheet';el.className='cm-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.addEventListener('click',e=>{if(e.target===el)cfClose()});document.body.appendChild(el)}
+  const left=Math.round((G.bud-price)*10)/10,loan=type==='loan',pct=Math.round(100*price/Math.max(.1,G.bud));
+  el.innerHTML='<div class="cm-neg cf-box"><div class="cm-nh"><span class="cm-av" style="background:'+(loan?'#2a7a6a':'#1f4f96')+'">'+(loan?'🔄':'✍️')+'</span><span class="cm-who"><b>'+_t(loan?'Confirmar la cesión':'Confirmar la compra')+'</b><small>'+estE(p.n)+' · '+_t(p.p)+' '+p.r+' · '+estE(t.n)+'</small></span><button class="cm-x" onclick="cfClose()" aria-label="'+_t('Cerrar')+'">✕</button></div>'
+   +'<div class="cf-bd"><div class="cf-row"><span>'+_t(loan?'Pagás por la cesión':'Pagás por la compra')+'</span><b>'+f1(price)+' M</b></div><div class="cf-row"><span>'+_t('Presupuesto actual')+'</span><b>'+f1(G.bud)+' M</b></div><div class="cf-row cf-tot"><span>'+_t('Te queda')+'</span><b>'+f1(left)+' M</b></div>'
+   +(pct>=50?'<p class="cf-warn">⚠️ '+cmF('Es el {p}% de tu presupuesto.',{p:pct})+'</p>':'')
+   +'<p class="sm">'+_t(loan?'El jugador juega para vos hasta el final de la temporada y después vuelve a su club. Si aceptan, la operación no se puede deshacer.':'El jugador pasa a ser tuyo. Si aceptan, la operación no se puede deshacer.')+'</p>'
+   +'<div class="cm-row"><button class="cm-btn" onclick="cfClose()">'+_t('Cancelar')+'</button><button class="cm-btn pri" onclick="cfGo()">'+_t('Enviar la oferta')+'</button></div></div></div>'}
+function cfClose(){const el=document.getElementById('cf-sheet');if(el)el.remove();CFP=null}
+function cfGo(){const c=CFP;const el=document.getElementById('cf-sheet');if(el)el.remove();if(!c)return;
+  const t=G.teams[c.ci];let pi=t?t.sq.findIndex(x=>x.n===c.n):-1;if(pi<0){CFP=null;G.msg=_t('Ese jugador ya no está en el club.');render();return}
+  CFP={go:1};try{offer(c.ci,pi,c.price,c.type)}finally{CFP=null}}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&document.getElementById('cf-sheet'))cfClose()});
+(()=>{const st=document.createElement('style');st.id='ofertas-691';st.textContent=`
+.cf-bd{padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.cf-row{display:flex;justify-content:space-between;gap:10px;font-size:15px}
+.cf-tot{border-top:1px solid var(--panel-border);padding-top:8px;font-size:16px}
+.cf-warn{margin:0;padding:8px 10px;border-radius:10px;background:rgba(201,138,11,.15);border:1px solid rgba(201,138,11,.5);font-weight:700}
+`;document.head.appendChild(st)})();
+
+Object.assign(I18N['en'],{"Confirmar la cesión": "Confirm the loan", "Confirmar la compra": "Confirm the purchase", "Pagás por la cesión": "You pay for the loan", "Pagás por la compra": "You pay for the purchase", "Presupuesto actual": "Current budget", "Te queda": "Left over", "Es el {p}% de tu presupuesto.": "That's {p}% of your budget.", "El jugador juega para vos hasta el final de la temporada y después vuelve a su club. Si aceptan, la operación no se puede deshacer.": "The player plays for you until the end of the season and then returns to his club. If they accept, it can't be undone.", "El jugador pasa a ser tuyo. Si aceptan, la operación no se puede deshacer.": "The player becomes yours. If they accept, it can't be undone.", "Cancelar": "Cancel", "Enviar la oferta": "Send the offer"});
+Object.assign(I18N['pt-BR'],{"Confirmar la cesión": "Confirmar o empréstimo", "Confirmar la compra": "Confirmar a compra", "Pagás por la cesión": "Você paga pelo empréstimo", "Pagás por la compra": "Você paga pela compra", "Presupuesto actual": "Orçamento atual", "Te queda": "Sobra", "Es el {p}% de tu presupuesto.": "É {p}% do seu orçamento.", "El jugador juega para vos hasta el final de la temporada y después vuelve a su club. Si aceptan, la operación no se puede deshacer.": "O jogador joga para você até o fim da temporada e depois volta ao clube dele. Se aceitarem, a operação não pode ser desfeita.", "El jugador pasa a ser tuyo. Si aceptan, la operación no se puede deshacer.": "O jogador passa a ser seu. Se aceitarem, a operação não pode ser desfeita.", "Cancelar": "Cancelar", "Enviar la oferta": "Enviar a oferta"});
+Object.assign(I18N['es'],{"Pagás por la cesión": "Pagas por la cesión", "Pagás por la compra": "Pagas por la compra", "Te queda": "Te queda", "El jugador juega para vos hasta el final de la temporada y después vuelve a su club. Si aceptan, la operación no se puede deshacer.": "El jugador juega para ti hasta el final de la temporada y después vuelve a su club. Si aceptan, la operación no se puede deshacer."});
+Object.assign(I18N['es-ES'],{"Pagás por la cesión": "Pagas por la cesión", "Pagás por la compra": "Pagas por la compra", "Te queda": "Te queda", "El jugador juega para vos hasta el final de la temporada y después vuelve a su club. Si aceptan, la operación no se puede deshacer.": "El jugador juega para ti hasta el final de la temporada y después vuelve a su club. Si aceptan, la operación no se puede deshacer."});
+
+// ===== Venta con negociación (v6.10) =====
+// Antes, «Vender» cobraba al instante el 80% del valor y el jugador desaparecía. Ahora abre las ofertas de hasta tres clubes
+// de la computadora que lo pueden pagar y le encuentran lugar (prefiere clubes de un nivel parecido al del jugador). Cada club
+// ofrece de entrada entre el 62% y el 74% del valor y tiene un límite oculto entre el 76% y el 85%, con la misma negociación
+// por chat que los sponsors (6.8). Asesora el ojeador: estima el límite con más precisión cuanto mejor es; sin ojeador se
+// negocia a ciegas. El jugador pasa al club que lo compra y el club paga. Si ningún club quiere, queda una venta rápida al 65%
+// a un club del exterior. Las ofertas duran la jornada (t.vso), para que recargar no sirva para buscar otras.
+// Simulado: negociando con los tres clubes lo que estima el ojeador, en promedio 79–81% del valor (antes, 80% fijo).
+const VT_Q=.65,VT_ERR=[.10,.08,.05,.03,.015];
+const VT_DD=['Hernán Molina','Sergio Paredes','Andrea Quintana','Marco Bellini','Felipe Rocha','Klaus Becker','Nuria Pons','Tom Ashford','Rui Matos','Diego Lazcano','Paolo Ricci','Ana Ferraz'];
+function vtLv(t){try{const o=cos(t).OJE;if(!o)return 0;return o.q<55?1:o.q<70?2:o.q<80?3:4}catch(e){return 0}}
+function vtAvg(T){const r=T.sq.map(x=>x.r).sort((a,b)=>b-a).slice(0,14);return r.length?r.reduce((a,b)=>a+b,0)/r.length:50}
+function vtNeed(T,p){const n=T.sq.filter(x=>x.p==p.p),best=n.length?Math.max(...n.map(x=>x.r)):0;
+  if(n.length<=(MIN[p.p]||1))return 'Les faltan jugadores en su puesto';if(p.r>best)return 'Sería su mejor jugador en el puesto';if(p.age<=22)return 'Apuestan a jugadores jóvenes';if(p.age>=30)return 'Buscan experiencia';return 'Buscan un titular en su puesto'}
+function vtErr(t,p){if(p.boughtThisSeason)return _t('Un jugador comprado o cedido esta temporada no se puede vender/ceder hasta la próxima.');if(!trOpen())return trMsg();
+  if(t.sq.length<=14)return _t('Necesitás al menos 14 jugadores.');if(t.sq.filter(x=>x.p==p.p).length<=MIN[p.p])return _t('Te quedarías sin ')+p.p+_t(' suficientes.');return ''}
+function vtOffers(t,p){const k=G.s+':'+G.jn;if(!t.vso||t.vso.k!==k)t.vso={k,p:{}};if(t.vso.p[p.n])return t.vso.p[p.n];
+  const V=vct(p),me=G.me,ok=i=>{const T=G.teams[i];return i!==me&&!G.pl.includes(i)&&T&&T.sq&&T.sq.length<MAXSQ&&(T.bud||0)>=V*.85&&!cupoErr(i,p)};
+  let C=G.teams.map((T,i)=>i).filter(ok).map(i=>({i,s:-Math.abs(vtAvg(G.teams[i])-(p.r-2))+Math.random()*5}));C.sort((a,b)=>b.s-a.s);
+  const out=[],used=new Set();for(const c of C){const T=G.teams[c.i];if(out.length>=3)break;if(out.length<2&&used.has(T.country)&&C.length>6)continue;used.add(T.country);out.push(c.i)}
+  return t.vso.p[p.n]=out.map(i=>({ci:i,of:Math.round(cmR(.62,.74)*100)/100,L:Math.round(cmR(.76,.85)*100)/100,dd:cmPick(VT_DD),need:vtNeed(G.teams[i],p),neg:null,gone:0,deal:0}))}
+// Reemplaza la venta directa
+let VT=null;
+(()=>{const o=sell;sell=function(i){const t=G.teams[G.me],p=t&&t.sq[i];if(!p)return o.apply(this,arguments);const e=vtErr(t,p);if(e){G.msg=e;render();return}
+  VT={n:p.n,view:'list'};vtOffers(t,p);vtDraw()}})();
+function vtP(){const t=G.teams[G.me];return VT?t.sq.find(x=>x.n===VT.n):null}
+function vtL(){const t=G.teams[G.me],p=vtP();return p?vtOffers(t,p):[]}
+const vtPct=(m,V)=>infLv()>=2?'':' <span class="vt-pc">'+cmF('{p}% del valor',{p:Math.round(100*m/V)})+'</span>';
+function vtCur(o){return o.neg?o.neg.cur:o.of}
+function vtCrest(T,sz){const c=colsOf(T);return '<svg class="vt-crest" viewBox="0 0 44 52" width="'+(sz||44)+'" height="'+Math.round((sz||44)*52/44)+'" aria-hidden="true"><path d="M4 4h36v22c0 13-9 20-18 24C13 46 4 39 4 26Z" fill="'+c[0]+'" stroke="rgba(0,0,0,.3)" stroke-width="2"/><path d="M22 4v46" stroke="'+c[1]+'" stroke-width="7" opacity=".9"/></svg>'}
+function vtLg(T){return _t(DN[T.div-1])+' · '+T.country}
+function vtNeg(k){const t=G.teams[G.me],p=vtP(),o=vtL()[k];if(!p||!o||o.gone)return;VT.view='neg';VT.k=k;const V=vct(p);
+  if(!o.neg){const l=vtLv(t),e=VT_ERR[l],c=o.L+cmR(-e,e)*.6,pat=2+(l>=3?1:0),sc=cos(t).OJE,T=G.teams[o.ci];
+    o.neg={pat,pat0:pat,cur:o.of,ask:Math.min(1,Math.max(o.of+.02,Math.round(c*100)/100)),log:[],est:[Math.max(o.of,c-e),Math.min(1,c+e)],done:0,mood:0};
+    o.neg.log.push({w:'in',x:cmF('Hola. Desde {c} ofrecemos <b>{m} M</b> por {n}.',{c:estE(T.n),m:f1(V*o.of),n:estE(p.n)})+' '+_t(o.need)+'.'});
+    o.neg.log.push({w:'tip',s:sc?'🔭 '+estE(sc.n)+' · '+_t('Ojeador'):'🔭 '+_t('Sin ojeador'),x:sc?cmF(l>=4?'Conozco bien a este club: pagarían entre <b>{a}</b> y <b>{b} M</b>. Tenemos {r} rondas.':l>=2?'Calculo que podrían llegar a entre <b>{a}</b> y <b>{b} M</b>. Tenemos {r} rondas.':'Calculo que podrían llegar a entre <b>{a}</b> y <b>{b} M</b>, pero no tengo mucha información. Tenemos {r} rondas.',{a:f1(V*o.neg.est[0]),b:f1(V*o.neg.est[1]),r:pat}):cmF('No tenés ojeador: negociás sin saber hasta dónde pueden pagar. Tenés {r} rondas.',{r:pat})})}
+  vtDraw()}
+function vtAsk(){const p=vtP(),o=vtL()[VT.k];if(!p||!o)return;const N=o.neg;if(N.done||N.busy)return;const a=N.ask,V=vct(p);
+  N.log.push({w:'out',x:cmF('Pedimos <b>{m} M</b>.',{m:f1(V*a)})});N.busy=1;vtDraw();
+  setTimeout(()=>{N.busy=0;
+    if(a<=o.L+1e-9){N.cur=a;N.done=1;o.deal=1;N.log.push({w:'in',x:_t(cmPick(['Trato hecho. 🤝','Está bien, lo pagamos. 🤝','Aceptamos.']))+' '+_t('Te esperamos para firmar.')});vtEv('acuerdo',a)}
+    else{N.pat--;const far=a>o.L+.07;N.mood=Math.min(2,N.mood+(far?2:1));
+      if(N.pat<=0){if(N.cur>o.of){N.done=1;o.deal=1;N.log.push({w:'in',x:cmF('No vamos a subir más. Seguimos en <b>{m} M</b>.',{m:f1(V*N.cur)})});vtEv('cierra',N.cur)}
+        else{o.gone=1;N.done=1;N.log.push({w:'in',x:_t('Así no nos sirve. Buscamos otro jugador. 👋')});N.log.push({w:'sys',x:cmF('{n} se retiró.',{n:estE(G.teams[o.ci].n)})});vtEv('retira',0)}}
+      else if(far)N.log.push({w:'in',x:_t(cmPick(['Eso es muchísimo para nosotros. 😠','Ni lo pensamos a ese precio. 😠']))+' '+cmF('Seguimos en {m} M.',{m:f1(V*N.cur)})});
+      else{N.cur=Math.round((N.cur+(o.L-N.cur)*cmR(.45,.75))*100)/100;N.log.push({w:'in',x:cmF('Tanto no. Podemos llegar a <b>{m} M</b>.',{m:f1(V*N.cur)})+(N.pat===1?' <b>'+_t('Es nuestra última oferta.')+'</b>':'')})}}
+    try{save()}catch(e){}vtDraw()},900)}
+function vtTake(){const p=vtP(),o=vtL()[VT.k];if(!p||!o)return;const N=o.neg;if(N.done||!(N.cur>o.of))return;N.done=1;o.deal=1;N.log.push({w:'out',x:cmF('Aceptamos <b>{m} M</b>.',{m:f1(vct(p)*N.cur)})});vtEv('cierra',N.cur);vtDraw()}
+function vtEv(r,x){try{stEv('venta',r+(x?' '+Math.round(x*100)+'%':''))}catch(e){}}
+function vtSell(k,quick){const t=G.teams[G.me],p=vtP();if(!p)return vtClose();const e=vtErr(t,p);if(e){G.msg=e;vtClose();return}
+  const V=vct(p),o=quick?null:vtL()[k];if(!quick&&(!o||o.gone))return;const T=o?G.teams[o.ci]:null,m=Math.round(V*(quick?VT_Q:vtCur(o))*10)/10;
+  const i=t.sq.indexOf(p);t.sq.splice(i,1);G.bud=Math.round((G.bud+m)*10)/10;
+  if(T){T.bud=Math.round(((T.bud||0)-m)*10)/10;p.boughtThisSeason=true;delete p.originalOwner;ctSign(p);T.sq.push(p);presFee(m,T,t);
+    tfeed(T.n+' ['+T.country+']'+_t(' compró a ')+p.n+' ('+_t(p.p)+' '+p.r+_t(') de ')+t.n+' ['+t.country+_t('] por ')+f1(m)+' M');
+    G.msg=_t('Vendiste a ')+p.n+_t(' por ')+f1(m)+' M → '+T.n+'.'}
+  else{presFee(V,t,t);G.msg=_t('Vendiste a ')+p.n+_t(' por ')+f1(m)+' M.'}
+  try{stEv('venta',(quick?'rapida ':'vende ')+Math.round(100*m/V)+'% '+vtLv(t))}catch(e){}
+  if(t.vso&&t.vso.p)delete t.vso.p[p.n];vtClose()}
+function vtClose(){const el=document.getElementById('vt-sheet');if(el)el.remove();VT=null;render()}
+function vtDraw(){const t=G.teams[G.me],p=vtP();if(!p)return vtClose();const V=vct(p),L=vtL(),lv=vtLv(t),sc=cos(t).OJE;
+  let el=document.getElementById('vt-sheet');if(!el){el=document.createElement('div');el.id='vt-sheet';el.className='cm-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');el.setAttribute('aria-label',_t('Venta'));el.addEventListener('click',e=>{if(e.target===el)vtClose()});document.body.appendChild(el)}
+  const head='<div class="cm-nh"><span class="vt-pos badge badge-'+p.p.toLowerCase()+'">'+_t(p.p)+'</span><span class="cm-who"><b>'+cmF('Vender a {n}',{n:estE(p.n)})+'</b><small>'+p.age+' '+_t('años')+' · '+_t('nivel')+' '+p.r+' · '+ctTxt(p)+'</small></span><button class="cm-x" onclick="vtClose()" aria-label="'+_t('Cerrar')+'">✕</button></div>';
+  if(VT.view==='list'){const act=L.filter(o=>!o.gone);
+    el.innerHTML='<div class="cm-neg vt-box">'+head+'<div class="vt-bd"><div class="vt-val"><span>'+_t('Valor de mercado')+'</span><b>'+f1(V)+' M</b></div>'
+     +(L.length&&infLv()<2?'<p class="sm vt-int">'+cmF('{k} clubes quieren a {n}. Cada uno negocia una sola vez; las ofertas se renuevan en la próxima jornada.',{k:L.length,n:estE(p.n)})+'</p>':'')
+     +'<div class="cm-dir"><span class="cm-dav" style="background:#7a5a1c">🔭</span><span>'+(sc?cmF('<b>{n}</b>, tu ojeador, te ayuda a negociar: estima hasta dónde paga cada club.',{n:estE(sc.n)})+'<br><span class="sm">'+_t(lv>=4?'Calidad muy alta: estima casi exacto.':lv>=3?'Buena calidad: estima bien y consigue una ronda más.':lv>=2?'Estima con un margen razonable.':'Estima con poca precisión.')+'</span>':_t('Sin ojeador, negociás a ciegas. Se contrata en Mercado › Empleados.'))+'</span></div>'
+     +L.map((o,k)=>{const T=G.teams[o.ci],m=V*vtCur(o),N=o.neg;return '<div class="vt-cl'+(o.gone?' gone':'')+(o.deal?' deal':'')+'">'+vtCrest(T)+'<div class="vt-nm"><b>'+estE(T.n)+'</b><small>'+vtLg(T)+'</small><span class="vt-need">'+_t(o.need)+'</span>'
+      +'<div class="vt-of"><b>'+f1(m)+' M</b>'+vtPct(m,V)+(o.deal?'<span class="cm-bump">✓ '+_t('acordado')+'</span>':o.gone?'<span class="sm">'+_t('se retiró')+'</span>':'')+'</div></div>'
+      +(o.gone?'':'<div class="cm-row vt-r">'+(o.deal?'':'<button class="cm-btn" onclick="vtNeg('+k+')">💬 '+(N?_t('Seguir negociando'):_t('Negociar'))+'</button>')+'<button class="cm-btn pri" onclick="vtSell('+k+')">✍️ '+cmF('Vender por {m} M',{m:f1(m)})+'</button></div>')+'</div>'}).join('')
+     +(act.length?'':'<div class="vt-quick"><b>'+_t(L.length?'Ningún club quiere seguir negociando.':'Ningún club puede pagarlo o le encuentra lugar ahora.')+'</b><p class="sm">'+_t('Un club del exterior se lo lleva ya, por menos.')+'</p><button class="cm-btn gold" onclick="vtSell(0,1)">⚡ '+cmF('Venta rápida por {m} M',{m:f1(V*VT_Q)})+(infLv()>=2?'':' ('+Math.round(VT_Q*100)+'%)')+'</button></div>')
+     +'</div></div>';return}
+  const o=L[VT.k],N=o.neg,T=G.teams[o.ci],F=['🙂','😐','😠'];
+  const w=N.log.map(m=>'<div class="cm-m '+m.w+'"><div class="cm-b">'+(m.s?'<div class="cm-snd">'+m.s+'</div>':m.w==='in'?'<div class="cm-snd" style="color:#9fd1ff">'+estE(o.dd)+' · '+_t('director deportivo')+'</div>':'')+m.x+'</div></div>').join('')+(N.busy?'<div class="cm-m in"><div class="cm-b cm-typ"><i></i><i></i><i></i></div></div>':'');
+  el.innerHTML='<div class="cm-neg vt-box"><div class="cm-nh"><button class="cm-x" onclick="VT.view=\'list\';vtDraw()" aria-label="'+_t('Volver a las ofertas')+'">←</button>'+vtCrest(T,32)+'<span class="cm-who"><b>'+estE(T.n)+'</b><small>'+estE(o.dd)+' · '+estE(p.n)+'</small></span><span class="cm-mood"><span class="cm-face" aria-label="'+_t('ánimo')+'">'+F[N.mood]+'</span><span class="cm-pat" aria-label="'+_t('paciencia')+'">'+Array.from({length:N.pat0},(_,k)=>'<i class="'+(k<N.pat?'':'off')+'"></i>').join('')+'</span></span></div>'
+   +'<div class="cm-nw" id="vt-nw">'+w+'</div>'
+   +(N.done?'<div class="cm-nc"><button class="cm-btn pri" onclick="VT.view=\'list\';vtDraw()">'+_t('Volver a las ofertas')+'</button></div>'
+   :'<div class="cm-nc"><div class="cm-cur"><span>'+_t('Oferta actual:')+' <b>'+f1(V*N.cur)+' M</b>'+vtPct(V*N.cur,V)+'</span><span>'+_t('Pedir:')+' <b id="vt-askm">'+f1(V*N.ask)+' M</b></span></div>'
+   +'<div class="cm-ask"><input id="vt-rng" type="range" min="'+Math.round(N.cur*100+1)+'" max="100" value="'+Math.round(N.ask*100)+'" oninput="vtSet(this.value/100)" aria-label="'+_t('Cuánto pedir')+'"><span class="cm-v" id="vt-askv">'+f1(V*N.ask)+' M</span></div>'
+   +'<div class="cm-row"><button class="cm-btn gold" onclick="vtAsk()" '+(N.busy?'disabled':'')+'>'+_t('Proponer')+'</button>'+(N.cur>o.of?'<button class="cm-btn pri" onclick="vtTake()">'+cmF('Aceptar {m} M',{m:f1(V*N.cur)})+'</button>':'')+'</div></div>')+'</div>';
+  const nw=document.getElementById('vt-nw');if(nw)nw.scrollTop=nw.scrollHeight}
+function vtSet(v){const p=vtP(),o=vtL()[VT.k];if(!p||!o)return;o.neg.ask=v;const V=vct(p);const a=document.getElementById('vt-askv'),b=document.getElementById('vt-askm');if(a)a.textContent=f1(V*v)+' M';if(b)b.textContent=f1(V*v)+' M'}
+addEventListener('keydown',e=>{if(e.key==='Escape'&&VT)vtClose()});
+(()=>{const st=document.createElement('style');st.id='venta-610';st.textContent=`
+.vt-box{max-width:620px}
+.vt-bd{overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px}
+.vt-pos{flex:0 0 auto;min-width:44px;text-align:center}
+.vt-val{display:flex;justify-content:space-between;align-items:baseline;gap:8px;padding:10px 12px;border-radius:12px;background:rgba(127,140,155,.14)}.vt-val b{font-size:1.25rem}
+.vt-int{margin:0}
+.vt-cl{display:grid;grid-template-columns:48px minmax(0,1fr);gap:10px;padding:12px;border-radius:14px;border:1px solid var(--panel-border);background:var(--card-bg)}
+.vt-cl.gone{opacity:.5;filter:grayscale(.8)}.vt-cl.deal{box-shadow:0 0 0 3px var(--primary)}
+.vt-nm{min-width:0}.vt-nm b{display:block}.vt-nm small{display:block;color:var(--fg-sub)}
+.vt-need{display:inline-block;font-size:12px;border-radius:12px;padding:1px 8px;background:var(--primary-glow,rgba(45,125,54,.14));color:var(--primary);font-weight:700;margin-top:3px}
+.vt-of{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin-top:6px}.vt-of b{font-size:1.3rem}
+.vt-pc{font-size:13px;font-weight:700;padding:2px 8px;border-radius:12px;background:rgba(127,140,155,.18)}
+.vt-r{grid-column:1/-1;margin-top:4px}
+.vt-quick{padding:12px;border-radius:12px;border:1px dashed var(--panel-border)}
+`;document.head.appendChild(st)})();
+
+Object.assign(I18N['en'],{"Les faltan jugadores en su puesto": "They're short of players in his position", "Sería su mejor jugador en el puesto": "He'd be their best player in that position", "Apuestan a jugadores jóvenes": "They're betting on young players", "Buscan experiencia": "They're looking for experience", "Buscan un titular en su puesto": "They want a starter in his position", "{p}% del valor": "{p}% of value", "Sin ojeador": "No scout", "Hola. Desde {c} ofrecemos <b>{m} M</b> por {n}.": "Hello. At {c} we offer <b>{m} M</b> for {n}.", "Conozco bien a este club: pagarían entre <b>{a}</b> y <b>{b} M</b>. Tenemos {r} rondas.": "I know this club well: they'd pay between <b>{a}</b> and <b>{b} M</b>. We have {r} rounds.", "Calculo que podrían llegar a entre <b>{a}</b> y <b>{b} M</b>. Tenemos {r} rondas.": "I reckon they could go to between <b>{a}</b> and <b>{b} M</b>. We have {r} rounds.", "Calculo que podrían llegar a entre <b>{a}</b> y <b>{b} M</b>, pero no tengo mucha información. Tenemos {r} rondas.": "I reckon they could go to between <b>{a}</b> and <b>{b} M</b>, but I don't have much information. We have {r} rounds.", "No tenés ojeador: negociás sin saber hasta dónde pueden pagar. Tenés {r} rondas.": "You have no scout: you negotiate without knowing how far they can go. You have {r} rounds.", "Pedimos <b>{m} M</b>.": "We ask for <b>{m} M</b>.", "Trato hecho. 🤝": "Deal. 🤝", "Está bien, lo pagamos. 🤝": "All right, we'll pay it. 🤝", "Aceptamos.": "We accept.", "Te esperamos para firmar.": "We'll be waiting for you to sign.", "No vamos a subir más. Seguimos en <b>{m} M</b>.": "We won't go any higher. We stay at <b>{m} M</b>.", "Así no nos sirve. Buscamos otro jugador. 👋": "That doesn't work for us. We'll look for another player. 👋", "{n} se retiró.": "{n} pulled out.", "Eso es muchísimo para nosotros. 😠": "That's far too much for us. 😠", "Ni lo pensamos a ese precio. 😠": "We won't even consider that price. 😠", "Seguimos en {m} M.": "We stay at {m} M.", "Tanto no. Podemos llegar a <b>{m} M</b>.": "Not that much. We can go to <b>{m} M</b>.", "Aceptamos <b>{m} M</b>.": "We accept <b>{m} M</b>.", "Venta": "Sale", "Vender a {n}": "Sell {n}", "años": "years old", "nivel": "level", "Valor de mercado": "Market value", "{k} clubes quieren a {n}. Cada uno negocia una sola vez; las ofertas se renuevan en la próxima jornada.": "{k} clubs want {n}. Each one negotiates only once; offers are renewed next matchday.", "<b>{n}</b>, tu ojeador, te ayuda a negociar: estima hasta dónde paga cada club.": "<b>{n}</b>, your scout, helps you negotiate: he estimates how far each club will pay.", "Calidad muy alta: estima casi exacto.": "Very high quality: his estimate is almost exact.", "Buena calidad: estima bien y consigue una ronda más.": "Good quality: estimates well and gets one extra round.", "Estima con un margen razonable.": "Estimates within a reasonable margin.", "Estima con poca precisión.": "Estimates with little precision.", "Sin ojeador, negociás a ciegas. Se contrata en Mercado › Empleados.": "Without a scout, you negotiate blind. Hire one in Market › Staff.", "acordado": "agreed", "Vender por {m} M": "Sell for {m} M", "Ningún club quiere seguir negociando.": "No club wants to keep negotiating.", "Ningún club puede pagarlo o le encuentra lugar ahora.": "No club can afford him or find room for him right now.", "Un club del exterior se lo lleva ya, por menos.": "A club from abroad takes him right away, for less.", "Venta rápida por {m} M": "Quick sale for {m} M", "director deportivo": "sporting director", "Cuánto pedir": "How much to ask"});
+Object.assign(I18N['pt-BR'],{"Les faltan jugadores en su puesto": "Faltam jogadores na posição dele", "Sería su mejor jugador en el puesto": "Seria o melhor jogador deles na posição", "Apuestan a jugadores jóvenes": "Apostam em jogadores jovens", "Buscan experiencia": "Procuram experiência", "Buscan un titular en su puesto": "Procuram um titular na posição", "{p}% del valor": "{p}% do valor", "Sin ojeador": "Sem olheiro", "Hola. Desde {c} ofrecemos <b>{m} M</b> por {n}.": "Olá. Aqui do {c} oferecemos <b>{m} M</b> por {n}.", "Conozco bien a este club: pagarían entre <b>{a}</b> y <b>{b} M</b>. Tenemos {r} rondas.": "Conheço bem este clube: pagariam entre <b>{a}</b> e <b>{b} M</b>. Temos {r} rodadas.", "Calculo que podrían llegar a entre <b>{a}</b> y <b>{b} M</b>. Tenemos {r} rondas.": "Calculo que poderiam chegar a entre <b>{a}</b> e <b>{b} M</b>. Temos {r} rodadas.", "Calculo que podrían llegar a entre <b>{a}</b> y <b>{b} M</b>, pero no tengo mucha información. Tenemos {r} rondas.": "Calculo que poderiam chegar a entre <b>{a}</b> e <b>{b} M</b>, mas não tenho muita informação. Temos {r} rodadas.", "No tenés ojeador: negociás sin saber hasta dónde pueden pagar. Tenés {r} rondas.": "Você não tem olheiro: negocia sem saber até onde podem pagar. Você tem {r} rodadas.", "Pedimos <b>{m} M</b>.": "Pedimos <b>{m} M</b>.", "Trato hecho. 🤝": "Negócio fechado. 🤝", "Está bien, lo pagamos. 🤝": "Tudo bem, pagamos. 🤝", "Aceptamos.": "Aceitamos.", "Te esperamos para firmar.": "Esperamos você para assinar.", "No vamos a subir más. Seguimos en <b>{m} M</b>.": "Não vamos subir mais. Seguimos em <b>{m} M</b>.", "Así no nos sirve. Buscamos otro jugador. 👋": "Assim não serve. Vamos procurar outro jogador. 👋", "{n} se retiró.": "{n} desistiu.", "Eso es muchísimo para nosotros. 😠": "Isso é demais para nós. 😠", "Ni lo pensamos a ese precio. 😠": "Nem pensamos nisso a esse preço. 😠", "Seguimos en {m} M.": "Seguimos em {m} M.", "Tanto no. Podemos llegar a <b>{m} M</b>.": "Tanto não. Podemos chegar a <b>{m} M</b>.", "Aceptamos <b>{m} M</b>.": "Aceitamos <b>{m} M</b>.", "Venta": "Venda", "Vender a {n}": "Vender {n}", "años": "anos", "nivel": "nível", "Valor de mercado": "Valor de mercado", "{k} clubes quieren a {n}. Cada uno negocia una sola vez; las ofertas se renuevan en la próxima jornada.": "{k} clubes querem {n}. Cada um negocia uma vez só; as ofertas se renovam na próxima rodada.", "<b>{n}</b>, tu ojeador, te ayuda a negociar: estima hasta dónde paga cada club.": "<b>{n}</b>, seu olheiro, ajuda a negociar: estima até onde cada clube paga.", "Calidad muy alta: estima casi exacto.": "Qualidade muito alta: estima quase exato.", "Buena calidad: estima bien y consigue una ronda más.": "Boa qualidade: estima bem e consegue uma rodada a mais.", "Estima con un margen razonable.": "Estima com uma margem razoável.", "Estima con poca precisión.": "Estima com pouca precisão.", "Sin ojeador, negociás a ciegas. Se contrata en Mercado › Empleados.": "Sem olheiro, você negocia às cegas. Contrate em Mercado › Funcionários.", "acordado": "acertado", "Vender por {m} M": "Vender por {m} M", "Ningún club quiere seguir negociando.": "Nenhum clube quer continuar negociando.", "Ningún club puede pagarlo o le encuentra lugar ahora.": "Nenhum clube pode pagá-lo ou tem lugar para ele agora.", "Un club del exterior se lo lleva ya, por menos.": "Um clube do exterior leva agora, por menos.", "Venta rápida por {m} M": "Venda rápida por {m} M", "director deportivo": "diretor esportivo", "Cuánto pedir": "Quanto pedir"});
+Object.assign(I18N['es'],{"No tenés ojeador: negociás sin saber hasta dónde pueden pagar. Tenés {r} rondas.": "No tienes ojeador: negocias sin saber hasta dónde pueden pagar. Tienes {r} rondas.", "Sin ojeador, negociás a ciegas. Se contrata en Mercado › Empleados.": "Sin ojeador, negocias a ciegas. Se contrata en Mercado › Empleados."});
+Object.assign(I18N['es-ES'],{"No tenés ojeador: negociás sin saber hasta dónde pueden pagar. Tenés {r} rondas.": "No tienes ojeador: negocias sin saber hasta dónde pueden pagar. Tienes {r} rondas.", "{n} se retiró.": "{n} se ha retirado.", "Sin ojeador, negociás a ciegas. Se contrata en Mercado › Empleados.": "Sin ojeador, negocias a ciegas. Se contrata en Mercado › Empleados."});
+
+// ===== Caras de los jugadores (v6.11): pixel art generado a partir de una semilla; 32×32 en listas y 64×64 en la ficha =====
+const FACE=(()=>{
+const SK=['#f7d9bf','#efc5a1','#e2b088','#cf9466','#b07448','#8f5a36','#6d4227','#4c2d1a'];
+const HC={neg:'#17110e',cas:'#3b2517',cmed:'#5e3b22',ccl:'#8c5d35',rub:'#c7a05a',rcl:'#e4cd92',roj:'#9a4322'};
+const EYE={mar:'#3a2516',az:'#3f6fb0',ve:'#4f7d45',gr:'#6b6f73'};
+// Distribuciones por país: piel (8 tonos) y pelo. Son amplias a propósito: en todos los países hay de todo.
+const NAT={
+ ARG:{s:[3,4,3,2,1,.6,.4,.3],h:{neg:4,cas:4,cmed:3,ccl:1.2,rub:.5,rcl:.2,roj:.2},e:{mar:7,az:1,ve:1,gr:.5}},
+ BRA:{s:[1,1.5,2,3,3,3,2.5,2.5],h:{neg:7,cas:3,cmed:1.5,ccl:.6,rub:.4,rcl:.2,roj:.1},e:{mar:9,az:.5,ve:.6,gr:.3}},
+ COL:{s:[1,2,3,3,2.5,2,1.5,1.5],h:{neg:6,cas:3,cmed:1.5,ccl:.5,rub:.3,rcl:.1,roj:.1},e:{mar:9,az:.4,ve:.5,gr:.2}},
+ MEX:{s:[1,2,3,3.5,3,2,1,.5],h:{neg:7,cas:3,cmed:1,ccl:.4,rub:.3,rcl:.1,roj:.1},e:{mar:9,az:.4,ve:.4,gr:.2}},
+ ENG:{s:[4,4,2,1,1,1,1.5,1.5],h:{neg:2,cas:3,cmed:3,ccl:2,rub:1.5,rcl:1,roj:1},e:{mar:4,az:4,ve:2,gr:1}},
+ ITA:{s:[2,4,4,2,1,.5,.4,.4],h:{neg:4,cas:4,cmed:3,ccl:1,rub:.5,rcl:.2,roj:.2},e:{mar:7,az:1.2,ve:1.5,gr:.5}},
+ ESP:{s:[2,4,4,2,1,.6,.5,.5],h:{neg:4,cas:4,cmed:3,ccl:1,rub:.5,rcl:.2,roj:.2},e:{mar:7,az:1,ve:1.2,gr:.5}},
+ GER:{s:[5,4,2,1,.7,.7,.8,.8],h:{neg:1.5,cas:2.5,cmed:3,ccl:2.5,rub:2,rcl:1.5,roj:.6},e:{mar:3,az:4,ve:2,gr:1.5}},
+ XXX:{s:[2,2,2,2,2,2,2,2],h:{neg:4,cas:3,cmed:2,ccl:1,rub:.6,rcl:.3,roj:.3},e:{mar:7,az:1,ve:1,gr:.5}}};
+const HAIR=['corto','rapado','rulos','largo','flequillo','afro','entradas','pelado','cresta','rodete','peinado'];
+const hsh=s=>{let h=1779033703^s.length;for(let i=0;i<s.length;i++){h=Math.imul(h^s.charCodeAt(i),3432918353);h=h<<13|h>>>19}return h>>>0};
+const rng=a=>()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296};
+const wpick=(r,o)=>{const k=Object.keys(o);let t=k.reduce((a,x)=>a+o[x],0),v=r()*t;for(const x of k){v-=o[x];if(v<=0)return x}return k[k.length-1]};
+const wpickA=(r,a)=>{let t=a.reduce((x,y)=>x+y,0),v=r()*t;for(let i=0;i<a.length;i++){v-=a[i];if(v<=0)return i}return a.length-1};
+const hex=c=>[parseInt(c.slice(1,3),16),parseInt(c.slice(3,5),16),parseInt(c.slice(5,7),16)];
+const mix=(a,b,t)=>{const A=hex(a),B=hex(b);return '#'+A.map((x,i)=>Math.round(x+(B[i]-x)*t).toString(16).padStart(2,'0')).join('')};
+const dk=(c,t)=>mix(c,'#000000',t),lt=(c,t)=>mix(c,'#ffffff',t);
+// Rasgos fijos del jugador (no dependen de la edad)
+function traits(seed,nat){const r=rng(hsh(seed)),N=NAT[nat]||NAT.XXX;const si=wpickA(r,N.s);
+  let hc=wpick(r,N.h);if(si>=5&&(hc==='rub'||hc==='rcl'||hc==='roj')&&r()<.8)hc='neg';
+  const curlyW=si>=5?3:1;let hs=wpick(r,{corto:4,rapado:3,rulos:curlyW,largo:1.2,flequillo:1.5,afro:si>=5?1.5:.15,entradas:0,pelado:.6,cresta:.6,rodete:.4,peinado:1.5});
+  return{si,hc,hs,eye:wpick(r,N.e),face:Math.floor(r()*4),brow:Math.floor(r()*3),eyes:Math.floor(r()*3),nose:Math.floor(r()*3),mouth:Math.floor(r()*3),
+   beard:wpick(r,{no:5,tres:2.5,completa:1.3,bigote:.5,candado:.9}),bald:r(),gray:r(),ear:r()<.5,freckle:si<=1&&(hc==='roj'||hc==='rub')&&r()<.5}}
+// Dibuja una cara de 32×32 en un canvas y devuelve la imagen. c1/c2: colores del club.
+const CACHE=new Map();
+function draw(seed,nat,age,c1,c2,big){const key=seed+'|'+nat+'|'+age+'|'+c1+'|'+c2+'|'+(big?64:32);if(CACHE.has(key))return CACHE.get(key);
+  const T=traits(seed,nat),W=32,px=new Array(W*W).fill(null),set=(x,y,c)=>{if(x>=0&&x<W&&y>=0&&y<W&&c)px[y*W+x]=c},get=(x,y)=>px[y*W+x];
+  const skin=SK[T.si],sh=dk(skin,.16),sh2=dk(skin,.28),hl=lt(skin,.12);
+  // Canas y entradas con la edad (la semilla decide cuánto le afecta)
+  const g=Math.max(0,Math.min(1,(age-29-T.gray*6)/9));let hair=HC[T.hc];if(g>0)hair=mix(hair,'#b9b9b9',g*.85);
+  const hairD=dk(hair,.3),hairL=lt(hair,.18);
+  let hs=T.hs;if(age>=31&&T.bald>.72&&hs!=='pelado'&&hs!=='afro')hs=age>=34&&T.bald>.88?'pelado':'entradas';
+  // Cabeza: elipse arriba y mandíbula que se angosta abajo (4 formas de cara)
+  const cx=16,cy=15,RX=[8.6,9.2,8.2,9.6][T.face],JW=[.55,.5,.65,.42][T.face];
+  const half=y=>{if(y<cy){const d=(cy-y)/9.6;return d>=1?0:Math.round(RX*Math.sqrt(1-d*d))}const t=(y-cy)/9.6;if(t>1)return 0;return Math.max(0,Math.round(RX*(1-JW*Math.pow(t,1.7))))};
+  const inH=(x,y)=>{const h=half(y);return h>0&&x>=cx-h&&x<=cx+h-1};
+  const halfE=(y,k)=>{const d=(cy-y)/(9.6+k);return d>=1||d<=-1?0:Math.round((RX+k*.6)*Math.sqrt(1-d*d))};
+  const inE=(x,y,k)=>{const h=halfE(y,k);return h>0&&x>=cx-h&&x<=cx+h-1};
+  const top=Math.ceil(cy-9.6);
+  // Camiseta y cuello
+  for(let y=26;y<W;y++){const w=10+(y-26)*1.2;for(let x=Math.round(cx-w);x<=Math.round(cx+w-1);x++)set(x,y,c1)}
+  for(let y=26;y<W;y++){set(Math.round(cx-10-(y-26)*1.2),y,dk(c1,.25));set(Math.round(cx+10+(y-26)*1.2-1),y,dk(c1,.25))}
+  for(let y=21;y<=27;y++)for(let x=13;x<=18;x++)set(x,y,y<=23?sh:skin);
+  // Cuello en V: el escote baja hacia el centro (no una tira horizontal)
+  for(let x=14;x<=17;x++)set(x,26,sh);set(15,27,sh2);set(16,27,sh2);
+  [[12,26],[13,26],[18,26],[19,26],[13,27],[14,27],[17,27],[18,27],[14,28],[15,28],[16,28],[17,28]].forEach(([x,y])=>set(x,y,c2));
+  // Cabeza con sombra del lado derecho y en la mandíbula
+  for(let y=top;y<=25;y++){const h=half(y);if(!h)continue;for(let x=cx-h;x<=cx+h-1;x++){let c=skin;if(x>=cx+h-2)c=sh;if(y>=21&&(x<=cx-h+1))c=sh;if(y>=23)c=x>=cx+h-3?sh2:sh;set(x,y,c)}}
+  // Orejas
+  const ey=14,eh=half(ey);[cx-eh-1,cx+eh].forEach(x=>{for(let y=ey;y<=ey+3;y++)set(x,y,y==ey||y==ey+3?sh:skin);set(x,ey+1,sh2)});
+  // Ojos, cejas, nariz y boca
+  const eyeC=EYE[T.eye],ly=15,lx=[12,18];
+  lx.forEach(x=>{if(T.eyes===0){set(x,ly,'#ffffff');set(x+1,ly,eyeC)}else if(T.eyes===1){set(x,ly,'#ffffff');set(x+1,ly,'#ffffff');set(x+(x<cx?1:0),ly,eyeC)}else{set(x,ly,dk(eyeC,.3));set(x+1,ly,dk(eyeC,.3))}set(x,ly+1,sh);set(x+1,ly+1,sh)});
+  const bc=age>=33&&g>.4?mix(hairD,'#9a9a9a',.5):hairD;
+  lx.forEach(x=>{if(T.brow===0){set(x-1,ly-2,bc);set(x,ly-2,bc);set(x+1,ly-2,bc)}else if(T.brow===1){set(x,ly-2,bc);set(x+1,ly-2,bc);set(x+(x<cx?-1:2),ly-1,bc)}else{set(x-1,ly-2,bc);set(x,ly-3,bc);set(x+1,ly-3,bc);set(x+2,ly-2,bc)}});
+  if(T.nose===0){set(15,17,sh);set(16,18,sh2);set(15,18,sh)}else if(T.nose===1){set(16,16,sh);set(16,17,sh);set(15,18,sh2);set(16,18,sh2);set(17,18,sh)}else{set(16,17,sh);set(14,18,sh);set(15,18,sh2);set(16,18,sh2);set(17,18,sh)}
+  const lip=dk(mix(skin,'#b04a4a',.35),.15);
+  if(T.mouth===0){for(let x=14;x<=17;x++)set(x,20,lip)}else if(T.mouth===1){set(13,19,lip);for(let x=14;x<=17;x++)set(x,20,lip);set(18,19,lip)}else{for(let x=14;x<=18;x++)set(x,20,lip);set(15,21,sh)}
+  set(cx-6,17,hl);set(cx-5,17,hl);
+  if(T.freckle){[[12,17],[14,17],[19,17],[18,18],[11,18]].forEach(([x,y])=>set(x,y,dk(skin,.22)))}
+  if(age>=31){set(13,10,sh);set(14,10,sh);set(17,10,sh);set(18,10,sh);if(age>=33){set(11,16,sh);set(21,16,sh);set(13,21,sh);set(18,21,sh)}}
+  // Barba (los juveniles no tienen)
+  const beard=age<19?'no':T.beard,bcol=g>0?mix(HC[T.hc],'#a8a8a8',g):HC[T.hc],mouthZ=(x,y)=>(y===20&&x>=13&&x<=18)||(y===19&&(x===13||x===18)&&T.mouth===1);
+  if(beard==='tres'){const c=mix(skin,bcol,.3);for(let y=18;y<=24;y++){const h=half(y);for(let x=cx-h;x<=cx+h-1;x++){if(mouthZ(x,y))continue;const edge=x<=cx-h+1||x>=cx+h-2||y>=22||(y===19&&x>=13&&x<=18);if(!edge)continue;if((x+y)%2===0)set(x,y,c)}}}
+  if(beard==='completa'){for(let y=16;y<=25;y++){const h=half(y);for(let x=cx-h;x<=cx+h-1;x++){if(mouthZ(x,y))continue;const side=x<=cx-h+1||x>=cx+h-2;if(y<19&&!side)continue;if(y===19&&x>cx-h+2&&x<cx+h-3&&!(x>=13&&x<=18))continue;set(x,y,(x*5+y*3)%7===0?dk(bcol,.25):bcol)}}}
+  if(beard==='bigote'||beard==='candado'||beard==='completa'){for(let x=13;x<=18;x++)set(x,19,bcol)}
+  if(beard==='candado'){for(let y=21;y<=24;y++)for(let x=14;x<=17;x++)if(inH(x,y))set(x,y,(x+y)%3?bcol:dk(bcol,.2))}
+  // Pelo (máscaras sobre la elipse de la cabeza)
+  const tex=(x,y,c)=>{const v=(x*7+y*13)%17;return v===0?hairL:(v===5||v===11)?hairD:(c||hair)};
+  const fill=(fn,c)=>{for(let y=0;y<26;y++)for(let x=0;x<W;x++)if(fn(x,y))set(x,y,c?c(x,y):tex(x,y))};
+  const side=(x,y,to)=>y<=to&&inE(x,y,1.2)&&(x<=cx-half(y)||x>=cx+half(y)-1||!inH(x,y));
+  const capF=(k,hl)=>(x,y)=>inE(x,y,k)&&(y<=hl||side(x,y,13));
+  if(hs==='corto')fill(capF(1.6,9));
+  else if(hs==='peinado'){fill(capF(1.8,9));for(let x=cx-7;x<=cx-2;x++)set(x,10,hair);for(let x=cx-5;x<=cx+5;x++)set(x,top-1+((x-cx)>0?0:0),hairL);set(cx-3,top,hairD);set(cx-3,top+1,hairD)}
+  else if(hs==='flequillo'){fill(capF(1.6,9));for(let x=cx-7;x<=cx+4;x++){set(x,10,hair);if(x%2)set(x,11,hair)}set(cx-2,12,hair)}
+  else if(hs==='rapado'){const c=mix(hair,skin,.5);fill((x,y)=>inE(x,y,.6)&&(y<=9||side(x,y,12)),(x,y)=>(x+y)%2?c:mix(c,skin,.35))}
+  else if(hs==='rulos'){fill((x,y)=>{if(!(inE(x,y,3)&&(y<=10||side(x,y,14))))return false;const edge=!inE(x,y,2);return !(edge&&(x*3+y)%3===0)},(x,y)=>((x*3+y*5)%7===0?hairL:(x+y)%3===0?hairD:hair))}
+  else if(hs==='afro'){fill((x,y)=>{const dx=(x-cx+.5)/(RX+4.5),dy=(y-(cy-3))/9.5;if(dx*dx+dy*dy>1)return false;if(y>9&&inH(x,y))return false;return y<=18},(x,y)=>(x*5+y*7)%6===0?hairL:(x+y)%4===0?hairD:hair)}
+  else if(hs==='largo'){fill((x,y)=>(inE(x,y,1.6)&&y<=9)||(y>=10&&y<=24&&(x===cx-half(Math.min(y,19))-1||x===cx-half(Math.min(y,19))||x===cx+half(Math.min(y,19))||x===cx+half(Math.min(y,19))-1||x===cx-half(Math.min(y,19))-2||x===cx+half(Math.min(y,19))+1)));for(let x=cx-7;x<=cx-2;x++)set(x,10,hair)}
+  else if(hs==='entradas'){fill((x,y)=>inE(x,y,1.2)&&((y<=8&&Math.abs(x-cx+.5)<=4)||(y<=7)||side(x,y,13)&&y>=10))}
+  else if(hs==='pelado'){fill((x,y)=>y>=10&&y<=14&&(x===cx-half(y)||x===cx+half(y)-1),()=>mix(hair,skin,.4));set(cx-3,top+1,lt(skin,.35));set(cx-2,top+1,lt(skin,.35));set(cx-3,top+2,lt(skin,.2))}
+  else if(hs==='cresta'){const c=mix(hair,skin,.55);fill((x,y)=>inE(x,y,.5)&&side(x,y,12)&&y>=8,()=>c);fill((x,y)=>x>=cx-2&&x<=cx+1&&y>=top-3&&y<=9&&(y>top-3||x>cx-2))}
+  else if(hs==='rodete'){fill(capF(1.4,9));fill((x,y)=>{const dx=(x-cx+.5)/3,dy=(y-(top-3))/2.2;return dx*dx+dy*dy<=1})}
+  const OL0='rgba(20,24,32,.85)';
+  if(big)return big64();
+  // Contorno exterior oscuro (le da la «terminación» de pixel art)
+  const OL='rgba(20,24,32,.85)',outline=(P,S,lim)=>{const P2=P.slice();for(let y=0;y<S;y++)for(let x=0;x<S;x++){if(P2[y*S+x])continue;if([[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>{const X=x+a,Y=y+b;return X>=0&&X<S&&Y>=0&&Y<S&&P2[Y*S+X]&&Y<lim}))P[y*S+x]=OL}};
+  outline(px,W,26);
+  return toUrl(px,W);
+  function toUrl(P,S){const cv=document.createElement('canvas');cv.width=S;cv.height=S;const c=cv.getContext('2d');P.forEach((v,i)=>{if(!v)return;c.fillStyle=v;c.fillRect(i%S,Math.floor(i/S),1,1)});const u=cv.toDataURL();if(CACHE.size>800)CACHE.clear();CACHE.set(key,u);return u}
+  // Versión de 64×64: la misma cara ampliada, con más detalle (ojos con iris y brillo, párpados, nariz, labios, mechones y sombras suaves)
+  function big64(){const B=64,Q=new Array(B*B).fill(null),S=(x,y,c)=>{if(x>=0&&x<B&&y>=0&&y<B&&c)Q[y*B+x]=c},Gt=(x,y)=>Q[y*B+x];
+    for(let y=0;y<B;y++)for(let x=0;x<B;x++)Q[y*B+x]=px[(y>>1)*W+(x>>1)];
+    const isSk=c=>c===skin,isSh=c=>c===sh||c===sh2;
+    // Sombras suaves: tramado en el borde entre piel y sombra
+    for(let y=1;y<B-1;y++)for(let x=1;x<B-1;x++){const c=Gt(x,y);if(isSk(c)&&(isSh(Gt(x+1,y))||isSh(Gt(x-1,y))||isSh(Gt(x,y+1)))&&(x+y)%4===0)S(x,y,mix(skin,sh,.5))}
+    // Mejillas
+    [[22,34],[23,34],[22,35],[39,34],[40,34],[40,35]].forEach(([x,y])=>{if(isSk(Gt(x,y)))S(x,y,mix(skin,'#d47a6a',.14))});
+    // Ojos
+    lx.forEach(ex=>{const x0=ex*2,y0=ly*2,inner=ex<cx;const lid=dk(skin,.38);for(let x=x0;x<x0+4;x++)S(x,y0-1,lid);
+      if(T.eyes===2){for(let x=x0;x<x0+4;x++)S(x,y0,dk(eyeC,.35));for(let x=x0;x<x0+4;x++)S(x,y0+1,sh);return}
+      for(let x=x0;x<x0+4;x++){S(x,y0,'#f4f1ea');S(x,y0+1,'#e6e1d6')}
+      const ix=inner?x0+2:x0;S(ix,y0,eyeC);S(ix+1,y0,eyeC);S(ix,y0+1,dk(eyeC,.2));S(ix+1,y0+1,dk(eyeC,.2));S(inner?ix:ix+1,y0+1,'#141010');S(inner?ix+1:ix,y0,'#ffffff');
+      for(let x=x0;x<x0+4;x++)S(x,y0+2,mix(skin,sh,.6));S(inner?x0+3:x0,y0+3,sh)});
+    // Cejas más finas: la fila de abajo se aclara
+    for(let y=18;y<30;y++)for(let x=18;x<46;x++){const c=Gt(x,y),d=Gt(x,y+1);if(c&&d&&c===d&&(c===bc)&&(y%2===1))S(x,y,mix(bc,skin,.35))}
+    // Nariz: puente con luz y fosas
+    for(let y=30;y<35;y++)S(31,y,lt(skin,.1));S(29,37,sh2);S(34,37,sh2);S(30,36,sh);S(33,36,sh);
+    // Boca: labio de arriba más oscuro, el de abajo con luz
+    for(let x=0;x<B;x++){const c=Gt(x,40);if(c===lip){S(x,41,mix(lip,skin,.45))}}
+    for(let x=0;x<B;x++){if(Gt(x,40)===lip&&Gt(x-1,40)!==lip){S(x-1,40,dk(lip,.25))}if(Gt(x,40)===lip&&Gt(x+1,40)!==lip){S(x+1,40,dk(lip,.25))}}
+    // Pelo: mechones y brillo
+    const hs2=new Set([hair,hairD,hairL]);for(let y=0;y<B;y++)for(let x=0;x<B;x++){const c=Gt(x,y);if(!hs2.has(c))continue;if((x+2*y)%7===0)S(x,y,hairD);else if((2*x+y)%11===0&&y<2*(top+4))S(x,y,hairL)}
+    // Barba: textura
+    for(let y=34;y<52;y++)for(let x=0;x<B;x++){const c=Gt(x,y);if(c===bcol&&(x*3+y)%5===0)S(x,y,dk(bcol,.3))}
+    // Camiseta: pliegues
+    for(let y=57;y<B;y++){S(22+((y-57)>>1),y,dk(c1,.12));S(41-((y-57)>>1),y,dk(c1,.12))}
+    // Contorno fino de 1 píxel
+    for(let i=0;i<Q.length;i++)if(Q[i]===OL0)Q[i]=null;
+    const P2=Q.slice();for(let y=0;y<B;y++)for(let x=0;x<B;x++){if(P2[y*B+x])continue;if([[1,0],[-1,0],[0,1],[0,-1]].some(([a,b])=>{const X=x+a,Y=y+b;return X>=0&&X<B&&Y>=0&&Y<B&&P2[Y*B+X]&&Y<52}))Q[y*B+x]='rgba(20,24,32,.9)'}
+    return toUrl(Q,B)}
+}
+return{draw,traits,NAT:Object.keys(NAT)}})();
+
+const FZ=(()=>{
+  // Nacionalidades que no tienen distribución propia usan la más parecida
+  const NM={URU:'ARG',CHI:'ARG',PAR:'ARG',PER:'COL',ECU:'COL',BOL:'COL',VEN:'COL',CRC:'COL',POR:'ESP',NED:'GER',BEL:'GER',SUI:'GER',AUT:'GER',DEN:'GER',SWE:'GER',NOR:'GER',CRO:'GER',SRB:'GER',POL:'GER',SCO:'ENG',WAL:'ENG',IRL:'ENG',USA:'XXX',FRA:'XXX'};
+  const nt=n=>FACE.NAT.includes(n)?n:(NM[n]||'XXX');
+  const seed=p=>{if(p.fz==null){let h=7;const s=(p.n||'')+'|'+(p.nat||'');for(let i=0;i<s.length;i++)h=Math.imul(h^s.charCodeAt(i),2654435761)>>>0;p.fz=h%1000000}return 'f'+p.fz};
+  let IX=null;
+  const idx=()=>{if(IX)return IX;IX=new Map();const add=(p,t)=>{if(p&&p.n&&!IX.has(p.n))IX.set(p.n,{p,t})};
+    try{const me=G.teams[G.me];if(me){(me.sq||[]).forEach(p=>add(p,me));(me.acad||[]).forEach(p=>add(p,me))}
+      (G.teams||[]).forEach(t=>{(t.sq||[]).forEach(p=>add(p,t));(t.acad||[]).forEach(p=>add(p,t))});(G.mk||[]).forEach(p=>add(p,null))}catch(e){}
+    setTimeout(()=>{IX=null},0);return IX};
+  const cols=t=>{try{if(t){const c=colsOf(t);return[c[0],c[1]]}}catch(e){}return['#6f7c88','#d9dee3']};
+  const url=(p,t,big)=>{const[c1,c2]=cols(t);return FACE.draw(seed(p),nt(p.nat),p.age||25,c1,c2,big)};
+  const find=n=>idx().get(n);
+  return{url,find,seed,cols}})();
+// Reemplaza el avatar genérico: si el jugador existe, su cara; si no, se mantiene el dibujo anterior
+(()=>{const o=getAvatarSVG;getAvatarSVG=function(name,pos){const f=name&&FZ.find(name);if(!f)return o.apply(this,arguments);let u;try{u=FZ.url(f.p,f.t)}catch(e){return o.apply(this,arguments)}
+  return '<img class="avatar face" src="'+u+'" width="32" height="32" alt="" data-fz="'+String(name).replace(/&/g,'&amp;').replace(/"/g,'&quot;')+'" title="'+_t('Ver ficha')+'">'}})();
+// Ficha del jugador con la cara grande
+function fzOpen(n){const f=FZ.find(n);if(!f)return;const{p,t}=f;fzClose();
+  const ti=t?G.teams.indexOf(t):-1,mine=ti===G.me;let goals=0;try{const k=ti+'|'+p.n;goals=(G.sc&&G.sc[k]&&G.sc[k].g)||0}catch(e){}
+  const row=(k,v)=>'<div class="fz-r"><span>'+_t(k)+'</span><b>'+v+'</b></div>';
+  let nat='';try{nat=natB(p,t||G.teams[G.me])+' '+(p.nat||'')}catch(e){nat=p.nat||'—'}
+  const club=t?estE(t.n):_t('Libre');
+  const el=document.createElement('div');el.id='fz-sheet';el.className='cm-sheet';el.setAttribute('role','dialog');el.setAttribute('aria-modal','true');
+  el.onclick=e=>{if(e.target===el)fzClose()};
+  el.innerHTML='<div class="cm-neg fz-box"><div class="cm-nh"><span class="cm-who"><b>'+estE(p.n)+'</b><small>'+club+'</small></span><button class="cm-x" onclick="fzClose()" aria-label="'+_t('Cerrar')+'">✕</button></div>'
+   +'<div class="fz-bd"><img class="fz-big" src="'+FZ.url(p,t,1)+'" width="128" height="128" alt=""><div class="fz-d">'
+   +row('Posición','<span class="badge badge-'+p.p.toLowerCase()+'">'+PLB(p)+'</span>')+row('Edad',p.age+' '+_t('años'))+row('Nivel',p.r)+row('Nacionalidad',nat)
+   +(t?row('Contrato',ctTxt(p)):'')+row('Valor',f1(val(p))+' M')+(t?row('Goles',goals):'')+'</div></div></div>';
+  document.body.appendChild(el)}
+function fzClose(){const e=document.getElementById('fz-sheet');if(e)e.remove()}
+document.addEventListener('click',e=>{const im=e.target&&e.target.closest&&e.target.closest('img.face[data-fz]');if(!im)return;e.preventDefault();e.stopPropagation();fzOpen(im.getAttribute('data-fz'))},true);
+document.addEventListener('keydown',e=>{if(e.key==='Escape')fzClose()});
+// Cara grande también en la hoja de venta
+(()=>{if(typeof vtDraw!=='function')return;const o=vtDraw;vtDraw=function(){const r=o.apply(this,arguments);try{const el=document.getElementById('vt-sheet'),p=vtP();const b=el&&el.querySelector('.vt-pos');if(b&&p&&!el.querySelector('.fz-vt')){const im=document.createElement('img');im.className='fz-vt';im.width=64;im.height=64;im.alt='';im.src=FZ.url(p,G.teams[G.me],1);b.parentNode.insertBefore(im,b)}}catch(e){}return r}})();
+(()=>{const st=document.createElement('style');st.textContent=`
+.avatar.face{width:32px;height:32px;image-rendering:pixelated;image-rendering:crisp-edges;background:#c9d2da;border:1px solid #68747e;border-radius:3px;cursor:pointer;object-fit:contain;padding:0}
+.fz-bd{display:flex;gap:14px;align-items:flex-start;padding:14px;overflow:auto}
+.fz-big{width:128px;height:128px;flex:0 0 128px;image-rendering:pixelated;image-rendering:crisp-edges;background:linear-gradient(#d6dde3,#b9c3cc);border:1px solid var(--panel-border,#8a96a1);border-radius:10px}
+.fz-d{flex:1;min-width:0}
+.fz-r{display:flex;justify-content:space-between;gap:8px;padding:5px 0;border-bottom:1px solid var(--panel-border,#ccd);font-size:13px}
+.fz-r span{color:var(--fg-sub,#5a6672)}
+.fz-r b{display:inline-flex;align-items:center;gap:6px}
+.fz-r .badge{color:#fff}
+.fz-r .nat svg{vertical-align:middle}
+.fz-vt{width:64px;height:64px;flex:0 0 64px;image-rendering:pixelated;background:linear-gradient(#d6dde3,#b9c3cc);border-radius:8px;border:1px solid var(--panel-border,#8a96a1)}
+@media(max-width:380px){.fz-bd{flex-direction:column;align-items:center}.fz-d{width:100%}}
+`;document.head.appendChild(st)})();
+
+Object.assign(I18N['en'],{"Ver ficha": "View profile", "Libre": "Free agent", "Posición": "Position", "Edad": "Age", "Nivel": "Level", "Nacionalidad": "Nationality", "Contrato": "Contract", "Valor": "Value", "Goles": "Goals", "años": "years old", "Cerrar": "Close"});
+Object.assign(I18N['pt-BR'],{"Ver ficha": "Ver ficha", "Libre": "Livre", "Posición": "Posição", "Edad": "Idade", "Nivel": "Nível", "Nacionalidad": "Nacionalidade", "Contrato": "Contrato", "Valor": "Valor", "Goles": "Gols", "años": "anos", "Cerrar": "Fechar"});
 
 // ===== Estadísticas (v6.7): ganchos en módulos que se definen más arriba (Sub-20, videos, plano, mensajes, archivo) =====
 // Por dónde se navega: barra (nav-main / nav-sub), inicio (botones «Ir a» y «Volver»), plano (plano 3D), msj (mensajes), not (noticias)
