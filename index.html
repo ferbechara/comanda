@@ -7,7 +7,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Comanda el Fútbol 6.12 - Edición América y Europa</title>
+<title>Comanda el Fútbol 6.12.1 - Edición América y Europa</title>
 <style>
 :root {
   --bg-dark: #0a0e17;
@@ -3468,7 +3468,7 @@ clk();setInterval(clk,30000);
 // No se envía ningún dato personal: el navegador (pid), la sesión (sid) y la partida (gid) se identifican con códigos al azar.
 // Los mensajes se guardan en una cola local y salen en lotes. Si no llegan, se reintentan (también la próxima vez que se abra el juego).
 // La planilla descarta los repetidos con sid + q (número de mensaje dentro de la sesión).
-const ST_URL='https://script.google.com/macros/s/AKfycbzTLj4YJz2CdNwqheL02p08txZKAWH5DyAnGBBASqsl8V6j_W2Gv2_JDc6st-qu6e3W0A/exec',ST_KEY='cef-2026',ST_VER='6.12',ST_QK='cef_q',ST_QMAX=300,ST_LOTE=40;
+const ST_URL='https://script.google.com/macros/s/AKfycbzTLj4YJz2CdNwqheL02p08txZKAWH5DyAnGBBASqsl8V6j_W2Gv2_JDc6st-qu6e3W0A/exec',ST_KEY='cef-2026',ST_VER='6.12.1',ST_QK='cef_q',ST_QMAX=300,ST_LOTE=40;
 const stId=()=>'x'+Math.random().toString(36).slice(2,10)+Date.now().toString(36);
 const ST_PID=(()=>{try{let v=localStorage.getItem('cef_pid');if(!v){v=stId();localStorage.setItem('cef_pid',v)}return v}catch(e){return stId()}})(),ST_SID=stId();
 let stSeq=0,stBusy=0,stFail=0,stNoAck=0,stT=0,stMem=[];
@@ -5768,7 +5768,7 @@ const poRuA=P=>P.len==='t'?_t('la temporada completa'):poIda(P)?_t('la ida'):_t(
 const poTb=()=>{const t=G.teams[G.me];return table(t.country,t.div)};
 const poPos=()=>{try{return poTb().findIndex(x=>x.i==G.me)+1}catch(e){return 0}};
 // Objetivo común, rescate y objetivo del turno
-const PO_OBJ=['pri','asc1','camp','cn','cont','ci','est','bud'];
+const PO_OBJ=['pri','asc1','camp','cn','cont','ci','bud'];  // 6.12.1: sin «Llevar el estadio a Mundialista» (se podía asegurar en la pretemporada)
 const poObjOk=(k,t)=>k==='pri'?t.div>2:k==='asc1'?t.div>1:k==='est'?(t.est||1)<3:true;
 const poBt=t=>Math.max(50,Math.ceil(((t&&t.bud)||20)*2.5/10)*10);
 function poObjTx(k,P){return k==='pri'?_t('Llegar a Primera'):k==='asc1'?_t('Ascender una vez'):k==='camp'?_t('Salir campeón de liga'):k==='cn'?_t('Ganar la Copa Nacional'):k==='cont'?_t('Clasificar a la Copa Internacional o a la Copa Europea'):k==='ci'?_t('Ganar la Copa Internacional o la Copa Europea'):k==='est'?_t('Llevar el estadio a Mundialista'):k==='bud'?twF('Llegar a {0} M de presupuesto',P&&P.bt||50):''}
